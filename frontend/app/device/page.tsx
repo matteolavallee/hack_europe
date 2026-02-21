@@ -53,11 +53,11 @@ async function speakText(text: string, onStart?: () => void, onEnd?: () => void)
 // ─── Design tokens per state ──────────────────────────────────────────────────
 
 const TOKEN = {
-  idle:         { orb: "#4f46e5", glow: "rgba(99,102,241,0.5)",  ring: "rgba(99,102,241,0.25)",  label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
-  recording:    { orb: "#059669", glow: "rgba(16,185,129,0.55)", ring: "rgba(16,185,129,0.25)",  label: "Listening…",              sub: "Tap again to stop" },
-  transcribing: { orb: "#d97706", glow: "rgba(245,158,11,0.5)",  ring: "rgba(245,158,11,0.25)",  label: "Processing…",            sub: "One moment…" },
-  speaking:     { orb: "#7c3aed", glow: "rgba(139,92,246,0.55)", ring: "rgba(139,92,246,0.25)",  label: "Speaking…",              sub: "" },
-  error:        { orb: "#dc2626", glow: "rgba(239,68,68,0.45)",  ring: "rgba(239,68,68,0.2)",    label: "Tap to try again",        sub: "" },
+  idle:         { orb: "#00a0dc", glow: "rgba(0,160,220,0.45)",  ring: "rgba(0,160,220,0.2)",   label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
+  recording:    { orb: "#16a34a", glow: "rgba(22,163,74,0.45)",  ring: "rgba(22,163,74,0.2)",   label: "Listening…",              sub: "Tap again to stop" },
+  transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)",   ring: "rgba(217,119,6,0.18)",  label: "Processing…",            sub: "One moment…" },
+  speaking:     { orb: "#0077b3", glow: "rgba(0,119,179,0.45)",  ring: "rgba(0,119,179,0.2)",   label: "Speaking…",              sub: "" },
+  error:        { orb: "#dc2626", glow: "rgba(220,38,38,0.35)",  ring: "rgba(220,38,38,0.15)",  label: "Tap to try again",        sub: "" },
 } satisfies Record<State, { orb: string; glow: string; ring: string; label: string; sub: string }>
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -221,7 +221,7 @@ export default function DevicePage() {
       <div style={{
         height: "100%",
         width: "100%",
-        background: "#030712",
+        background: "#f5f6f8",
         display: "grid",
         gridTemplateRows: "64px 1fr 96px",
         overflow: "hidden",
@@ -234,7 +234,7 @@ export default function DevicePage() {
           justifyContent: "space-between",
           padding: "0 32px",
         }}>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, fontWeight: 300, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ color: "#6b7280", fontSize: 18, fontWeight: 300, fontVariantNumeric: "tabular-nums" }}>
             <Clock />
           </span>
 
@@ -242,8 +242,8 @@ export default function DevicePage() {
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "8px 18px", borderRadius: 999,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
           }}>
             <div style={{
               width: 8, height: 8, borderRadius: "50%",
@@ -251,7 +251,7 @@ export default function DevicePage() {
               boxShadow: `0 0 6px ${tok.glow}`,
               animation: state !== "idle" && state !== "error" ? "bar 1s ease-in-out infinite alternate" : undefined,
             }}/>
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 500, textTransform: "capitalize", letterSpacing: "0.04em" }}>
+            <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 500, textTransform: "capitalize", letterSpacing: "0.04em" }}>
               {state}
             </span>
           </div>
@@ -309,7 +309,7 @@ export default function DevicePage() {
           {/* Text block */}
           <div style={{ textAlign: "center", width: "100%", maxWidth: 480 }}>
             <p style={{
-              color: "#ffffff",
+              color: "#2e2e2e",
               fontSize: 48,
               fontWeight: 700,
               letterSpacing: "-0.02em",
@@ -321,7 +321,7 @@ export default function DevicePage() {
             </p>
             {tok.sub && state !== "speaking" && (
               <p style={{
-                color: "rgba(255,255,255,0.38)",
+                color: "#6b7280",
                 fontSize: 22,
                 fontWeight: 400,
                 margin: 0,
@@ -331,7 +331,7 @@ export default function DevicePage() {
             )}
             {state === "error" && errorMsg && (
               <p style={{
-                color: "rgba(252,165,165,0.85)",
+                color: "#dc2626",
                 fontSize: 16,
                 marginTop: 12,
                 lineHeight: 1.5,
@@ -345,16 +345,16 @@ export default function DevicePage() {
           {transcript && state === "idle" && (
             <div style={{
               width: "100%", maxWidth: 480,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
               borderRadius: 20,
               padding: "18px 24px",
               textAlign: "left",
             }}>
-              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
+              <p style={{ color: "#6b7280", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
                 You said
               </p>
-              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, lineHeight: 1.5, margin: 0 }}>
+              <p style={{ color: "#2e2e2e", fontSize: 18, lineHeight: 1.5, margin: 0 }}>
                 {transcript}
               </p>
             </div>
@@ -373,11 +373,11 @@ export default function DevicePage() {
                 placeholder="Type something to speak…"
                 style={{
                   flex: 1,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
                   borderRadius: 16,
                   padding: "12px 16px",
-                  color: "#fff",
+                  color: "#2e2e2e",
                   fontSize: 15,
                   resize: "none",
                   outline: "none",
@@ -391,7 +391,7 @@ export default function DevicePage() {
                   width: 52, height: "100%",
                   minHeight: 56,
                   borderRadius: 14,
-                  background: "#7c3aed",
+                  background: "#00a0dc",
                   color: "#fff",
                   border: "none",
                   cursor: "pointer",
@@ -412,7 +412,7 @@ export default function DevicePage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 24px",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
+          borderTop: "1px solid #e5e7eb",
         }}>
 
           {/* TTS toggle — subtle, developer-facing */}
@@ -422,9 +422,9 @@ export default function DevicePage() {
               display: "flex", alignItems: "center", gap: 8,
               padding: "10px 18px",
               borderRadius: 12,
-              background: showTts ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.3)",
+              background: showTts ? "#e5e7eb" : "#f5f6f8",
+              border: "1px solid #e5e7eb",
+              color: "#6b7280",
               fontSize: 13, fontWeight: 500,
               cursor: "pointer",
             }}
@@ -442,9 +442,9 @@ export default function DevicePage() {
               display: "flex", alignItems: "center", gap: 10,
               padding: "16px 28px",
               borderRadius: 18,
-              background: "rgba(239,68,68,0.12)",
-              border: "1.5px solid rgba(239,68,68,0.3)",
-              color: "rgba(252,165,165,0.9)",
+              background: "rgba(220,38,38,0.08)",
+              border: "1.5px solid rgba(220,38,38,0.25)",
+              color: "#dc2626",
               fontSize: 18, fontWeight: 600,
               cursor: "pointer",
               letterSpacing: "0.01em",
@@ -463,22 +463,22 @@ export default function DevicePage() {
       {showHelp && (
         <div style={{
           position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.8)",
+          background: "rgba(0,0,0,0.45)",
           backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: 32, zIndex: 50,
         }}>
           <div style={{
-            background: "#111827",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
             borderRadius: 28,
             padding: 40,
             maxWidth: 400,
             width: "100%",
             textAlign: "center",
-            boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
           }}>
-            <p style={{ color: "#fff", fontSize: 26, fontWeight: 600, lineHeight: 1.35, margin: "0 0 32px" }}>
+            <p style={{ color: "#2e2e2e", fontSize: 26, fontWeight: 600, lineHeight: 1.35, margin: "0 0 32px" }}>
               Do you need assistance?
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -486,7 +486,7 @@ export default function DevicePage() {
                 onClick={() => setShowHelp(false)}
                 style={{
                   padding: "20px 24px", borderRadius: 18,
-                  background: "#4f46e5", border: "none",
+                  background: "#00a0dc", border: "none",
                   color: "#fff", fontSize: 20, fontWeight: 700,
                   cursor: "pointer",
                 }}
