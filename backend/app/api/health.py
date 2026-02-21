@@ -16,14 +16,14 @@ from app.services import json_store_service
 router = APIRouter(prefix="/health", tags=["health"])
 
 @router.get("/status")
-async def health_check():
+def health_check():
     """
     Une simple route de vérification du système.
     """
     return {"status": "ok", "message": "Jarvis backend is running"}
 
 @router.get("/logs", response_model=List[HealthLog])
-async def get_health_logs():
+def get_health_logs():
     """
     Récupère l'historique de santé du patient.
     """
@@ -31,12 +31,10 @@ async def get_health_logs():
     return [HealthLog(**l) for l in logs_data]
 
 @router.post("/logs", response_model=HealthLog)
-async def add_health_log(log_in: HealthLogCreate):
+def add_health_log(log_in: HealthLogCreate):
     """
     Ajoute une nouvelle entrée de santé.
     """
-    logs = json_store_service.get_health_logs()
-    
     new_log = HealthLog(
         log_id=uuid.uuid4().hex[:8],
         date=log_in.date,
@@ -44,14 +42,16 @@ async def add_health_log(log_in: HealthLogCreate):
         medication_taken=log_in.medication_taken,
         notes=log_in.notes
     )
-    
-    logs.append(new_log.model_dump())
-    json_store_service.save_health_logs(logs)
-    
+
+    with json_store_service.lock:
+        logs = json_store_service.get_health_logs()
+        logs.append(new_log.model_dump())
+        json_store_service.save_health_logs(logs)
+
     return new_log
 
 @router.get("/events", response_model=List[CareLoopEvent])
-async def get_care_events(
+def get_care_events(
     care_receiver_id: Optional[str] = Query(None),
     limit: int = Query(50)
 ):

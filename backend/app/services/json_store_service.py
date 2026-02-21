@@ -6,12 +6,14 @@ Responsibilities:
 - Provide abstract CRUD operations for all JSON files (reminders, logs, contexts, etc).
 """
 import json
-import asyncio
+import threading
 from pathlib import Path
 from typing import Any, List, Dict
-import os
 
 from app.core import constants
+
+# Global lock for all JSON read-modify-write operations
+lock = threading.Lock()
 
 def _read_json(file_path: Path) -> Any:
     if not file_path.exists():

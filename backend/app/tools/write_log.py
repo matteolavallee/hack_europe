@@ -14,10 +14,8 @@ def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "
     """
     Sauvegarde l'humeur et l'état médical perçu du patient dans son fichier de suivi quotidien.
     """
-    logs = json_store_service.get_health_logs()
-    
     today = datetime.now().strftime("%Y-%m-%d")
-    
+
     new_log = {
         "log_id": uuid.uuid4().hex[:8],
         "date": today,
@@ -25,8 +23,10 @@ def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "
         "medication_taken": medication_taken,
         "notes": notes
     }
-    
-    logs.append(new_log)
-    json_store_service.save_health_logs(logs)
-    
+
+    with json_store_service.lock:
+        logs = json_store_service.get_health_logs()
+        logs.append(new_log)
+        json_store_service.save_health_logs(logs)
+
     return {"status": "success", "log": new_log}
