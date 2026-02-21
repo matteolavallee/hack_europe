@@ -17,35 +17,51 @@ Alzheimer's patients often require continuous support for daily tasks, communica
 - FastAPI, Google Gemini API, ElevenLabs TTS, Telegram Bot API, Stripe
 - Next.js (React)
 
-## How to run backend
+## Prerequisites
+- Node.js (v18+)
+- Python (3.11+)
+- API Keys for Google Gemini API and ElevenLabs (optional)
+
+## How to run from scratch
+
+### 1. Start the Backend
 ```bash
+# Navigate to the backend folder
 cd backend
+
+# Create a virtual environment
+python -m venv .venv
+
+# Activate it (Windows)
+.venv\\Scripts\\activate
+# Activate it (Mac/Linux)
+# source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+
+# Start the FastAPI server
+
+cd backend
+python -m venv .venv
 uvicorn app.main:app --reload
 ```
+The backend will be available at [http://localhost:8000](http://localhost:8000)
+API Documentation (Swagger UI) is available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## How to run UI
+### 2. Start the Frontend UI
 ```bash
+# Open a new terminal and navigate to the frontend folder
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start the Next.js frontend
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The caregiver dashboard and patient kiosk UI will be available at [http://localhost:3000](http://localhost:3000).
 
-This project uses Next.js and [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font).
-
-## Learn More
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> **Note**: To use the real backend data, ensure that `NEXT_PUBLIC_USE_MOCK=false` in your `frontend/.env` file.

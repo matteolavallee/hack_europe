@@ -7,24 +7,27 @@ Responsibilities:
 """
 import uuid
 from typing import Dict, Any
+from datetime import datetime
 from app.services import json_store_service
-from app.models.schemas import ReminderCreate
 
 def schedule_reminder(title: str, time: str, repeat: str = "daily") -> Dict[str, Any]:
     """
     Ajoute un nouveau rappel dans la base de données json à partir de paramètres textuels.
     """
-    reminders = json_store_service.get_reminders()
+    items = json_store_service.get_calendar_items()
     
-    new_reminder = {
-        "id": uuid.uuid4().hex[:8],
+    new_item = {
+        "id": f"ci-{uuid.uuid4().hex[:8]}",
+        "care_receiver_id": "default", # Will rely on context
+        "type": "reminder",
         "title": title,
-        "time": time,
-        "repeat": repeat,
-        "is_active": True
+        "scheduled_at": time,
+        "repeat_rule": repeat,
+        "status": "scheduled",
+        "created_at": datetime.utcnow().isoformat() + "Z"
     }
     
-    reminders.append(new_reminder)
-    json_store_service.save_reminders(reminders)
+    items.append(new_item)
+    json_store_service.save_calendar_items(items)
     
-    return {"status": "success", "reminder": new_reminder}
+    return {"status": "success", "reminder": new_item}

@@ -33,6 +33,15 @@ def _write_json(file_path: Path, data: Any):
 def get_caregivers() -> List[Dict[str, Any]]:
     return _read_json(constants.CAREGIVERS_FILE)
 
+def save_caregivers(caregivers: List[Dict[str, Any]]):
+    _write_json(constants.CAREGIVERS_FILE, caregivers)
+
+def get_care_receivers() -> List[Dict[str, Any]]:
+    return _read_json(constants.CARE_RECEIVERS_FILE)
+
+def save_care_receivers(receivers: List[Dict[str, Any]]):
+    _write_json(constants.CARE_RECEIVERS_FILE, receivers)
+
 def get_patient_context() -> Dict[str, Any]:
     data = _read_json(constants.PATIENT_CONTEXT_FILE)
     return data if isinstance(data, dict) else {}
@@ -42,6 +51,30 @@ def get_reminders() -> List[Dict[str, Any]]:
 
 def save_reminders(reminders: List[Dict[str, Any]]):
     _write_json(constants.REMINDERS_FILE, reminders)
+
+def get_calendar_items() -> List[Dict[str, Any]]:
+    return _read_json(constants.CALENDAR_ITEMS_FILE)
+
+def save_calendar_items(items: List[Dict[str, Any]]):
+    _write_json(constants.CALENDAR_ITEMS_FILE, items)
+
+def get_audio_contents() -> List[Dict[str, Any]]:
+    return _read_json(constants.AUDIO_CONTENTS_FILE)
+
+def save_audio_contents(contents: List[Dict[str, Any]]):
+    _write_json(constants.AUDIO_CONTENTS_FILE, contents)
+
+def get_events() -> List[Dict[str, Any]]:
+    return _read_json(constants.EVENTS_FILE)
+
+def save_events(events: List[Dict[str, Any]]):
+    _write_json(constants.EVENTS_FILE, events)
+
+def get_device_actions() -> List[Dict[str, Any]]:
+    return _read_json(constants.DEVICE_ACTIONS_FILE)
+
+def save_device_actions(actions: List[Dict[str, Any]]):
+    _write_json(constants.DEVICE_ACTIONS_FILE, actions)
 
 def get_conversations() -> List[Dict[str, Any]]:
     return _read_json(constants.CONVERSATIONS_FILE)

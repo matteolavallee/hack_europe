@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, ".")
 import json
 from pydantic import TypeAdapter
-from app.models.schemas import Caregiver, PatientContext, Reminder, HealthLog, ConversationLog
+from app.models.schemas import Caregiver, PatientContext, CalendarItem, HealthLog, ConversationLog
 from app.core import constants
 
 def check_file(file_path, schema, is_list=True):
@@ -22,6 +22,6 @@ def check_file(file_path, schema, is_list=True):
 print("--- Validating Data JSONs against Pydantic Schemas ---")
 check_file(constants.CAREGIVERS_FILE, Caregiver)
 check_file(constants.PATIENT_CONTEXT_FILE, PatientContext, is_list=False)
-check_file(constants.REMINDERS_FILE, Reminder)
+check_file(constants.CALENDAR_ITEMS_FILE, CalendarItem)
 check_file(constants.HEALTH_LOGS_FILE, HealthLog)
 check_file(constants.CONVERSATIONS_FILE, ConversationLog)

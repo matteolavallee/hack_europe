@@ -10,8 +10,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load environment variables from the .env file if it exists
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Load environment variables from the .env file if it exists at the root of the project
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 env_path = BASE_DIR / ".env"
 load_dotenv(dotenv_path=env_path)
 
