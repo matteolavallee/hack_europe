@@ -73,12 +73,12 @@ export async function updateCaregiver(id: string, data: Partial<Caregiver>): Pro
 
 export async function getCareReceiver(id: string): Promise<CareReceiver> {
   if (USE_MOCK) return mockCareReceiver
-  return request<CareReceiver>(`/api/care-receivers/${id}`)
+  return request<CareReceiver>(`/api/caregivers/receivers/${id}`)
 }
 
 export async function createCareReceiver(data: Omit<CareReceiver, "id" | "created_at">): Promise<CareReceiver> {
   if (USE_MOCK) return { ...mockCareReceiver, ...data }
-  return request<CareReceiver>("/api/care-receivers", {
+  return request<CareReceiver>("/api/caregivers/receivers", {
     method: "POST",
     body: JSON.stringify(data),
   })
@@ -86,7 +86,7 @@ export async function createCareReceiver(data: Omit<CareReceiver, "id" | "create
 
 export async function updateCareReceiver(id: string, data: Partial<CareReceiver>): Promise<CareReceiver> {
   if (USE_MOCK) return { ...mockCareReceiver, ...data }
-  return request<CareReceiver>(`/api/care-receivers/${id}`, {
+  return request<CareReceiver>(`/api/caregivers/receivers/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   })
@@ -96,7 +96,7 @@ export async function updateCareReceiver(id: string, data: Partial<CareReceiver>
 
 export async function getCalendarItems(careReceiverId: string): Promise<CalendarItem[]> {
   if (USE_MOCK) return mockCalendarItems
-  return request<CalendarItem[]>(`/api/calendar-items?care_receiver_id=${careReceiverId}`)
+  return request<CalendarItem[]>(`/api/reminders?care_receiver_id=${careReceiverId}`)
 }
 
 export async function createCalendarItem(data: CreateCalendarItemPayload): Promise<CalendarItem> {
@@ -110,7 +110,7 @@ export async function createCalendarItem(data: CreateCalendarItemPayload): Promi
     mockCalendarItems.unshift(item)
     return item
   }
-  return request<CalendarItem>("/api/calendar-items", {
+  return request<CalendarItem>("/api/reminders", {
     method: "POST",
     body: JSON.stringify(data),
   })
@@ -123,7 +123,7 @@ export async function updateCalendarItem(id: string, data: UpdateCalendarItemPay
     Object.assign(item, data)
     return item
   }
-  return request<CalendarItem>(`/api/calendar-items/${id}`, {
+  return request<CalendarItem>(`/api/reminders/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   })
@@ -135,14 +135,14 @@ export async function deleteCalendarItem(id: string): Promise<void> {
     if (idx !== -1) mockCalendarItems.splice(idx, 1)
     return
   }
-  await request<void>(`/api/calendar-items/${id}`, { method: "DELETE" })
+  await request<void>(`/api/reminders/${id}`, { method: "DELETE" })
 }
 
 // ─── Audio content ────────────────────────────────────────────────────────────
 
 export async function getAudioContents(careReceiverId: string): Promise<AudioContent[]> {
   if (USE_MOCK) return mockAudioContents
-  return request<AudioContent[]>(`/api/audio-contents?care_receiver_id=${careReceiverId}`)
+  return request<AudioContent[]>(`/api/chat/audio?care_receiver_id=${careReceiverId}`)
 }
 
 export async function createAudioContent(data: CreateAudioContentPayload): Promise<AudioContent> {
@@ -156,7 +156,7 @@ export async function createAudioContent(data: CreateAudioContentPayload): Promi
     mockAudioContents.unshift(item)
     return item
   }
-  return request<AudioContent>("/api/audio-contents", {
+  return request<AudioContent>("/api/chat/audio", {
     method: "POST",
     body: JSON.stringify(data),
   })
@@ -164,12 +164,12 @@ export async function createAudioContent(data: CreateAudioContentPayload): Promi
 
 export async function sendAudioNow(id: string): Promise<void> {
   if (USE_MOCK) { console.log("[mock] sendAudioNow", id); return }
-  await request<void>(`/api/audio-contents/${id}/send-now`, { method: "POST" })
+  await request<void>(`/api/chat/audio/${id}/send-now`, { method: "POST" })
 }
 
 export async function scheduleAudio(id: string, scheduledAt: string): Promise<void> {
   if (USE_MOCK) { console.log("[mock] scheduleAudio", id, scheduledAt); return }
-  await request<void>(`/api/audio-contents/${id}/schedule`, {
+  await request<void>(`/api/chat/audio/${id}/schedule`, {
     method: "POST",
     body: JSON.stringify({ scheduled_at: scheduledAt }),
   })
@@ -182,7 +182,7 @@ export async function toggleRecommendable(id: string, recommendable: boolean): P
     item.recommendable = recommendable
     return item
   }
-  return request<AudioContent>(`/api/audio-contents/${id}`, {
+  return request<AudioContent>(`/api/chat/audio/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ recommendable }),
   })
@@ -194,7 +194,7 @@ export async function deleteAudioContent(id: string): Promise<void> {
     if (idx !== -1) mockAudioContents.splice(idx, 1)
     return
   }
-  await request<void>(`/api/audio-contents/${id}`, { method: "DELETE" })
+  await request<void>(`/api/chat/audio/${id}`, { method: "DELETE" })
 }
 
 // ─── Timeline / events ────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ export async function deleteAudioContent(id: string): Promise<void> {
 export async function getEvents(careReceiverId: string, limit = 50): Promise<CareLoopEvent[]> {
   if (USE_MOCK) return mockEvents.slice(0, limit)
   return request<CareLoopEvent[]>(
-    `/api/events?care_receiver_id=${careReceiverId}&limit=${limit}`,
+    `/api/health/events?care_receiver_id=${careReceiverId}&limit=${limit}`,
   )
 }
 
@@ -210,7 +210,7 @@ export async function getEvents(careReceiverId: string, limit = 50): Promise<Car
 
 export async function triggerReminderNow(careReceiverId: string): Promise<void> {
   if (USE_MOCK) { console.log("[mock] triggerReminderNow"); return }
-  await request<void>("/api/demo/trigger-reminder-now", {
+  await request<void>("/api/reminders/demo/trigger-reminder-now", {
     method: "POST",
     body: JSON.stringify({ care_receiver_id: careReceiverId }),
   })
@@ -218,7 +218,7 @@ export async function triggerReminderNow(careReceiverId: string): Promise<void> 
 
 export async function triggerSuggestion(careReceiverId: string, kind: "exercise" | "message"): Promise<void> {
   if (USE_MOCK) { console.log("[mock] triggerSuggestion", kind); return }
-  await request<void>("/api/demo/trigger-suggestion", {
+  await request<void>("/api/chat/demo/trigger-suggestion", {
     method: "POST",
     body: JSON.stringify({ care_receiver_id: careReceiverId, kind }),
   })
@@ -229,13 +229,13 @@ export async function triggerSuggestion(careReceiverId: string, kind: "exercise"
 export async function getNextActions(careReceiverId: string): Promise<DeviceAction[]> {
   if (USE_MOCK) return mockNextActions
   return request<DeviceAction[]>(
-    `/api/device/next-actions?care_receiver_id=${careReceiverId}`,
+    `/api/chat/device/next-actions?care_receiver_id=${careReceiverId}`,
   )
 }
 
 export async function submitDeviceResponse(payload: DeviceResponsePayload): Promise<void> {
   if (USE_MOCK) { console.log("[mock] submitDeviceResponse", payload); return }
-  await request<void>("/api/device/response", {
+  await request<void>("/api/chat/device/response", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -243,7 +243,7 @@ export async function submitDeviceResponse(payload: DeviceResponsePayload): Prom
 
 export async function submitHelpRequest(payload: HelpRequestPayload): Promise<void> {
   if (USE_MOCK) { console.log("[mock] submitHelpRequest", payload); return }
-  await request<void>("/api/device/help-request", {
+  await request<void>("/api/chat/device/help-request", {
     method: "POST",
     body: JSON.stringify(payload),
   })
