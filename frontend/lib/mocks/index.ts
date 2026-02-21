@@ -26,50 +26,7 @@ export const mockCareReceiver: CareReceiver = {
   created_at: "2026-02-20T10:01:00Z",
 }
 
-export const mockCalendarItems: CalendarItem[] = [
-  {
-    id: "ci-0001",
-    care_receiver_id: MOCK_CARE_RECEIVER_ID,
-    type: "reminder",
-    title: "Morning medication",
-    message_text: "Hi Simone. It's time to take your morning medication. Did you take it?",
-    scheduled_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    repeat_rule: "daily",
-    status: "scheduled",
-    created_at: "2026-02-21T08:00:00Z",
-  },
-  {
-    id: "ci-0002",
-    care_receiver_id: MOCK_CARE_RECEIVER_ID,
-    type: "reminder",
-    title: "Doctor appointment",
-    message_text: "Hi Simone. Don't forget your doctor's appointment at 3pm today.",
-    scheduled_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-    status: "scheduled",
-    created_at: "2026-02-21T08:05:00Z",
-  },
-  {
-    id: "ci-0003",
-    care_receiver_id: MOCK_CARE_RECEIVER_ID,
-    type: "audio_push",
-    title: "Family message from Marie",
-    scheduled_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    status: "scheduled",
-    audio_content_id: "ac-0001",
-    created_at: "2026-02-21T08:10:00Z",
-  },
-  {
-    id: "ci-0004",
-    care_receiver_id: MOCK_CARE_RECEIVER_ID,
-    type: "reminder",
-    title: "Evening medication",
-    message_text: "Hi Simone. It's time for your evening medication.",
-    scheduled_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    repeat_rule: "daily",
-    status: "completed",
-    created_at: "2026-02-21T07:00:00Z",
-  },
-]
+export const mockCalendarItems: CalendarItem[] = []
 
 export const mockAudioContents: AudioContent[] = [
   {

@@ -32,7 +32,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -42,18 +42,18 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
       {/* Panel */}
       <div
         className={cn(
-          "relative w-full mx-4 bg-white rounded-2xl shadow-2xl",
+          "relative flex max-h-[90vh] w-full flex-col bg-card rounded-lg border border-border shadow-lg",
           sizes[size],
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            aria-label="Close"
           >
-            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
               <path
                 fillRule="evenodd"
                 d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -63,12 +63,10 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-sm text-foreground">{children}</div>
 
-        {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-5 py-4">
             {footer}
           </div>
         )}
@@ -113,7 +111,7 @@ export function ConfirmModal({
         </>
       }
     >
-      <p className="text-sm text-gray-600">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </Modal>
   )
 }

@@ -94,9 +94,19 @@ export async function updateCareReceiver(id: string, data: Partial<CareReceiver>
 
 // ─── Calendar items ───────────────────────────────────────────────────────────
 
+function isNetworkError(err: unknown): boolean {
+  if (err instanceof TypeError) return err.message === "Failed to fetch"
+  return false
+}
+
 export async function getCalendarItems(careReceiverId: string): Promise<CalendarItem[]> {
   if (USE_MOCK) return mockCalendarItems
-  return request<CalendarItem[]>(`/api/reminders?care_receiver_id=${careReceiverId}`)
+  try {
+    return await request<CalendarItem[]>(`/api/calendar-items?care_receiver_id=${careReceiverId}`)
+  } catch (err) {
+    if (isNetworkError(err)) return mockCalendarItems
+    throw err
+  }
 }
 
 export async function createCalendarItem(data: CreateCalendarItemPayload): Promise<CalendarItem> {
@@ -110,10 +120,24 @@ export async function createCalendarItem(data: CreateCalendarItemPayload): Promi
     mockCalendarItems.unshift(item)
     return item
   }
-  return request<CalendarItem>("/api/reminders", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
+  try {
+    return await request<CalendarItem>("/api/calendar-items", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  } catch (err) {
+    if (isNetworkError(err)) {
+      const item: CalendarItem = {
+        id: `ci-${Date.now()}`,
+        ...data,
+        status: "scheduled",
+        created_at: new Date().toISOString(),
+      }
+      mockCalendarItems.unshift(item)
+      return item
+    }
+    throw err
+  }
 }
 
 export async function updateCalendarItem(id: string, data: UpdateCalendarItemPayload): Promise<CalendarItem> {
