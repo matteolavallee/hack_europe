@@ -8,8 +8,10 @@ Responsibilities:
 import json
 from pathlib import Path
 
+from google.genai import types
+
 from app.core.constants import BASE_DIR
-from app.services.llm_service import get_gemini_model, TOOL_MAP
+from app.services.llm_service import create_chat, TOOL_MAP
 from app.services.json_store_service import get_patient_context, get_conversations, save_conversations
 
 from app.models.schemas import HistoryItem
@@ -35,75 +37,67 @@ def _get_or_create_chat(session_id: str):
     """Get the active chat session (includes conversational history) or start a new one."""
     if session_id not in _active_chats:
         system_instruction = load_system_prompt()
-        model = get_gemini_model(system_instruction)
-        _active_chats[session_id] = model.start_chat()
+        _active_chats[session_id] = create_chat(system_instruction)
     return _active_chats[session_id]
 
 def process_user_message(session_id: str, message: str) -> str:
     """
-    Sends a message to the agent, handles any necessary tool calls iteratively, 
+    Sends a message to the agent, handles any necessary tool calls iteratively,
     and returns the final textual response.
     """
-    chat = _get_or_create_chat(session_id)
-    
-    # Send user message
+    try:
+        chat = _get_or_create_chat(session_id)
+    except RuntimeError as e:
+        return f"Erreur de configuration: {str(e)}"
+
     try:
         response = chat.send_message(message)
     except Exception as e:
         return f"Erreur de l'agent LLM: {str(e)}"
-    
+
     # Iteratively resolve tool calls
-    while any(part.function_call for part in response.parts):
+    while response.function_calls:
         function_responses = []
-        for part in response.parts:
-            if part.function_call:
-                name = part.function_call.name
-                # Extract args safely
-                args = {k: v for k, v in part.function_call.args.items()}
-                print(f"[AGENT TOOL EXECUTION] Tool: {name}, Args: {args}")
-                
-                # Execute Python function locally
-                if name in TOOL_MAP:
-                    try:
-                        result = TOOL_MAP[name](**args)
-                    except Exception as e:
-                        result = {"error": str(e)}
-                else:
-                    result = {"error": f"Tool {name} not found"}
-                
-                print(f"[AGENT TOOL RESULT] Result: {result}")
-                
-                # Pass back result to Gemini
-                function_responses.append({
-                    "function_response": {
-                        "name": name,
-                        "response": result
-                    }
-                })
-        
-        # Send function outputs back to the model 
+        for fc in response.function_calls:
+            name = fc.name
+            args = dict(fc.args)
+            print(f"[AGENT TOOL EXECUTION] Tool: {name}, Args: {args}")
+
+            if name in TOOL_MAP:
+                try:
+                    result = TOOL_MAP[name](**args)
+                except Exception as e:
+                    result = {"error": str(e)}
+            else:
+                result = {"error": f"Tool {name} not found"}
+
+            print(f"[AGENT TOOL RESULT] Result: {result}")
+
+            function_responses.append(
+                types.Part.from_function_response(name=name, response=result)
+            )
+
         response = chat.send_message(function_responses)
-        
+
     return response.text
 
 def get_session_history(session_id: str) -> list[HistoryItem]:
     """Retrieve history from the active chat state."""
     if session_id not in _active_chats:
         return []
-    
+
     chat = _active_chats[session_id]
     history = []
-    for m in chat.history:
+    for m in chat.get_history():
         # Ignore system messages / tool execution overhead in simple output
         role = "assistant" if m.role == "model" else "user"
-        
-        # We try to find the plain text part
+
         content = ""
         for p in m.parts:
-            if hasattr(p, 'text') and p.text:
+            if hasattr(p, "text") and p.text:
                 content += p.text
-        
+
         if content:
             history.append(HistoryItem(role=role, content=content))
-    
+
     return history
