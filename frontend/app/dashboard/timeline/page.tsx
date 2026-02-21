@@ -221,27 +221,27 @@ export default function TimelinePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={variant}>{eventLabel(ev.type)}</Badge>
-                        {ev.payload.title && (
+                        {ev.payload.title != null && ev.payload.title !== "" ? (
                           <span className="text-sm text-gray-600">
                             — {String(ev.payload.title)}
                           </span>
-                        )}
-                        {ev.payload.score !== undefined && (
+                        ) : null}
+                        {ev.payload.score !== undefined ? (
                           <span className="text-sm text-gray-600">
                             Score: {String(ev.payload.score)}/{String(ev.payload.total)}
                           </span>
-                        )}
-                        {ev.payload.channel && (
+                        ) : null}
+                        {ev.payload.channel != null && ev.payload.channel !== "" ? (
                           <span className="text-sm text-gray-500">
                             via {String(ev.payload.channel)}
                           </span>
-                        )}
-                        {ev.payload.attempts !== undefined && (
+                        ) : null}
+                        {ev.payload.attempts !== undefined ? (
                           <span className="text-sm text-gray-500">
                             {String(ev.payload.attempts)} attempt
                             {Number(ev.payload.attempts) !== 1 ? "s" : ""}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
 

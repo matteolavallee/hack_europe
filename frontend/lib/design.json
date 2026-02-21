@@ -1,0 +1,42 @@
+{
+  "tokens": {
+    "colors": {
+      "background": "#FFFFFF",
+      "foreground": "#2e2e2e",
+      "primary": "#00a0dc",
+      "primary-foreground": "#FFFFFF",
+      "muted": "#f5f6f8",
+      "muted-foreground": "#6b7280",
+      "accent": "#e8f4fc",
+      "accent-foreground": "#0077b3",
+      "border": "#e5e7eb",
+      "card": "#FFFFFF",
+      "card-foreground": "#2e2e2e",
+      "destructive": "#dc2626",
+      "input": "#e5e7eb",
+      "ring": "#00a0dc"
+    },
+    "spacing": {
+      "lg": "1.5rem",
+      "md": "1rem",
+      "sm": "0.5rem",
+      "xs": "0.25rem"
+    },
+    "radius": "0.5rem",
+    "shadow": {
+      "sm": "0 1px 2px rgba(0,0,0,0.04)",
+      "md": "0 2px 8px -2px rgba(0,0,0,0.05)",
+      "lg": "0 8px 24px -4px rgba(0,0,0,0.06)"
+    },
+    "fontSize": {
+      "base": "clamp(0.9375rem, 2.5vw, 1.125rem)",
+      "button": "0.875rem"
+    },
+    "touchTarget": "52px",
+    "familyColors": {
+      "mom": "#3b82f6",
+      "dad": "#dc2626",
+      "doctor": "#16a34a"
+    }
+  }
+}

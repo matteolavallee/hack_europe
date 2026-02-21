@@ -32,19 +32,33 @@ export interface SpeechResult {
   intent: SpeechIntent
 }
 
+// Web Speech API - types vary by environment
+interface WindowWithSpeech {
+  SpeechRecognition?: new () => Record<string, unknown>
+  webkitSpeechRecognition?: new () => Record<string, unknown>
+}
+
 // Returns a promise that resolves when the user speaks (or rejects on timeout / error)
 export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
   return new Promise((resolve, reject) => {
-    const SpeechRecognition =
-      (window as unknown as { SpeechRecognition?: typeof globalThis.SpeechRecognition; webkitSpeechRecognition?: typeof globalThis.SpeechRecognition }).SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: typeof globalThis.SpeechRecognition }).webkitSpeechRecognition
+    const win = window as unknown as WindowWithSpeech
+    const SpeechRecognition = win.SpeechRecognition ?? win.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
       reject(new Error("SpeechRecognition not supported in this browser"))
       return
     }
 
-    const recognition = new SpeechRecognition()
+    const recognition = new SpeechRecognition() as {
+      lang: string
+      interimResults: boolean
+      maxAlternatives: number
+      onresult: ((e: unknown) => void) | null
+      onerror: ((e: unknown) => void) | null
+      onend: (() => void) | null
+      stop: () => void
+      start: () => void
+    }
     recognition.lang = "en-US"
     recognition.interimResults = false
     recognition.maxAlternatives = 1
@@ -54,15 +68,17 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
       reject(new Error("timeout"))
     }, timeoutMs)
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: unknown) => {
       clearTimeout(timeout)
-      const transcript = event.results[0][0].transcript
+      const e = event as { results: { [i: number]: { [j: number]: { transcript: string } } } }
+      const transcript = e.results[0][0].transcript
       resolve({ transcript, intent: parseIntent(transcript) })
     }
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: unknown) => {
       clearTimeout(timeout)
-      reject(new Error(event.error))
+      const err = event as { error?: string }
+      reject(new Error(err.error ?? "unknown"))
     }
 
     recognition.onend = () => {
