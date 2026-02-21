@@ -34,7 +34,9 @@
     "**/*.tsx",
     "**/*.mts",
     "/tmp/hack_europe_next/types/**/*.ts",
-    "/tmp/hack_europe_next/dev/types/**/*.ts"
+    "/tmp/hack_europe_next/dev/types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

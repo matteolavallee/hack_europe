@@ -32,33 +32,21 @@ export interface SpeechResult {
   intent: SpeechIntent
 }
 
-// Web Speech API - types vary by environment
-interface WindowWithSpeech {
-  SpeechRecognition?: new () => Record<string, unknown>
-  webkitSpeechRecognition?: new () => Record<string, unknown>
-}
-
 // Returns a promise that resolves when the user speaks (or rejects on timeout / error)
 export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
   return new Promise((resolve, reject) => {
-    const win = window as unknown as WindowWithSpeech
-    const SpeechRecognition = win.SpeechRecognition ?? win.webkitSpeechRecognition
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SrCtor: (new () => any) | undefined =
+      w.SpeechRecognition ?? w.webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
+    if (!SrCtor) {
       reject(new Error("SpeechRecognition not supported in this browser"))
       return
     }
 
-    const recognition = new SpeechRecognition() as {
-      lang: string
-      interimResults: boolean
-      maxAlternatives: number
-      onresult: ((e: unknown) => void) | null
-      onerror: ((e: unknown) => void) | null
-      onend: (() => void) | null
-      stop: () => void
-      start: () => void
-    }
+    const recognition = new SrCtor()
     recognition.lang = "en-US"
     recognition.interimResults = false
     recognition.maxAlternatives = 1
@@ -68,17 +56,17 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
       reject(new Error("timeout"))
     }, timeoutMs)
 
-    recognition.onresult = (event: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
       clearTimeout(timeout)
-      const e = event as { results: { [i: number]: { [j: number]: { transcript: string } } } }
-      const transcript = e.results[0][0].transcript
+      const transcript = event.results[0][0].transcript
       resolve({ transcript, intent: parseIntent(transcript) })
     }
 
-    recognition.onerror = (event: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
       clearTimeout(timeout)
-      const err = event as { error?: string }
-      reject(new Error(err.error ?? "unknown"))
+      reject(new Error(event.error))
     }
 
     recognition.onend = () => {
