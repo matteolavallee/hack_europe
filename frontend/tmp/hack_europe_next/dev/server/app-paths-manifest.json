@@ -1,0 +1,8 @@
+{
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/content/page": "app/dashboard/content/page.js",
+  "/dashboard/calendar/page": "app/dashboard/calendar/page.js",
+  "/dashboard/timeline/page": "app/dashboard/timeline/page.js",
+  "/device/page": "app/device/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js"
+}
