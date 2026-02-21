@@ -10,17 +10,39 @@ from typing import List, Optional, Any
 from datetime import datetime
 from app.models.enums import RelationType
 
-# --- CAREGIVERS ---
+# --- CAREGIVERS & CARE RECEIVERS ---
 class Caregiver(BaseModel):
     id: str
     name: str
     relation: RelationType
     phone: str
     telegram_id: str
+    telegram_chat_id: Optional[str] = None
     email: str
     is_primary: bool
     address: Optional[str] = None
     context: Optional[str] = None
+    created_at: Optional[str] = None
+
+class CareReceiver(BaseModel):
+    id: str
+    caregiver_id: str
+    name: str
+    language: str
+    tone: str
+    created_at: str
+
+class CareReceiverCreate(BaseModel):
+    caregiver_id: str
+    name: str
+    language: str
+    tone: str
+
+class CareReceiverUpdate(BaseModel):
+    caregiver_id: Optional[str] = None
+    name: Optional[str] = None
+    language: Optional[str] = None
+    tone: Optional[str] = None
 
 # --- PATIENT CONTEXT ---
 class PatientContext(BaseModel):
@@ -33,24 +55,30 @@ class PatientContext(BaseModel):
     home_address: str
     interests: List[str]
 
-# --- REMINDERS ---
-class ReminderBase(BaseModel):
+# --- CALENDAR (REMINDERS / AUDIO PUSH) ---
+class CalendarItemBase(BaseModel):
+    type: str # reminder or audio_push
     title: str
-    time: str
-    repeat: str = "daily"
-    is_active: bool = True
+    message_text: Optional[str] = None
+    scheduled_at: str
+    repeat_rule: Optional[str] = None
+    audio_content_id: Optional[str] = None
 
-class Reminder(ReminderBase):
+class CalendarItem(CalendarItemBase):
     id: str
+    care_receiver_id: str
+    status: str # scheduled, sent, completed, cancelled
+    created_at: str
 
-class ReminderCreate(ReminderBase):
-    pass
+class CreateCalendarItemPayload(CalendarItemBase):
+    care_receiver_id: str
 
-class ReminderUpdate(BaseModel):
+class UpdateCalendarItemPayload(BaseModel):
     title: Optional[str] = None
-    time: Optional[str] = None
-    repeat: Optional[str] = None
-    is_active: Optional[bool] = None
+    message_text: Optional[str] = None
+    scheduled_at: Optional[str] = None
+    repeat_rule: Optional[str] = None
+    status: Optional[str] = None
 
 # --- CONVERSATIONS ---
 class Message(BaseModel):
@@ -88,3 +116,45 @@ class ChatResponse(BaseModel):
 class HistoryItem(BaseModel):
     role: str
     content: str
+    
+# --- AUDIO CONTENT ---
+class AudioContent(BaseModel):
+    id: str
+    care_receiver_id: str
+    title: str
+    url: str
+    kind: str # family_message, audiobook, other
+    recommendable: bool
+    created_at: str
+
+class CreateAudioContentPayload(BaseModel):
+    care_receiver_id: str
+    title: str
+    url: str
+    kind: str
+    recommendable: Optional[bool] = False
+    
+# --- EVENTS (TIMELINE) ---
+class CareLoopEvent(BaseModel):
+    id: str
+    care_receiver_id: str
+    type: str # reminder_created, exercise_completed, etc.
+    payload: dict
+    created_at: str
+
+# --- DEVICE INTERACTION ---
+class DeviceAction(BaseModel):
+    id: str
+    kind: str # speak_reminder, propose_audio, propose_exercise
+    text_to_speak: str
+    audio_url: Optional[str] = None
+    calendar_item_id: Optional[str] = None
+    audio_content_id: Optional[str] = None
+
+class DeviceResponsePayload(BaseModel):
+    action_id: str
+    response: str # yes, no, later
+
+class HelpRequestPayload(BaseModel):
+    type: str # notify_caregiver
+    message: Optional[str] = None

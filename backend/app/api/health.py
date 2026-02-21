@@ -5,12 +5,12 @@ Responsibilities:
 - Fetch daily mood and task completion (like medication) logs.
 - Provide endpoints for the UI to monitor the patient's basic health metrics over time.
 """
-from fastapi import APIRouter
-from typing import List
+from fastapi import APIRouter, Query
+from typing import List, Optional
 import uuid
 from datetime import datetime
 
-from app.models.schemas import HealthLog, HealthLogCreate
+from app.models.schemas import HealthLog, HealthLogCreate, CareLoopEvent
 from app.services import json_store_service
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -49,3 +49,21 @@ async def add_health_log(log_in: HealthLogCreate):
     json_store_service.save_health_logs(logs)
     
     return new_log
+
+@router.get("/events", response_model=List[CareLoopEvent])
+async def get_care_events(
+    care_receiver_id: Optional[str] = Query(None),
+    limit: int = Query(50)
+):
+    """
+    Récupère les événements de la timeline pour le dashboard.
+    """
+    events_data = json_store_service.get_events()
+    
+    if care_receiver_id:
+        events_data = [e for e in events_data if e.get("care_receiver_id") == care_receiver_id]
+        
+    # Sort events by created_at descending
+    events_data.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return [CareLoopEvent(**e) for e in events_data[:limit]]

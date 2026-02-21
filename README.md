@@ -17,16 +17,51 @@ Alzheimer's patients often require continuous support for daily tasks, communica
 - FastAPI, Google Gemini API, ElevenLabs TTS, Telegram Bot API, Stripe
 - Next.js (React)
 
-## How to run backend (future)
+## Prerequisites
+- Node.js (v18+)
+- Python (3.11+)
+- API Keys for Google Gemini API and ElevenLabs (optional)
+
+## How to run from scratch
+
+### 1. Start the Backend
 ```bash
+# Navigate to the backend folder
 cd backend
+
+# Create a virtual environment
+python -m venv .venv
+
+# Activate it (Windows)
+.venv\\Scripts\\activate
+# Activate it (Mac/Linux)
+# source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+
+# Start the FastAPI server
+
+cd backend
+python -m venv .venv
 uvicorn app.main:app --reload
 ```
+The backend will be available at [http://localhost:8000](http://localhost:8000)
+API Documentation (Swagger UI) is available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## How to run UI (future)
+### 2. Start the Frontend UI
 ```bash
-cd ui
+# Open a new terminal and navigate to the frontend folder
+cd frontend
+
+# Install dependencies
 npm install
+
+# Start the Next.js frontend
 npm run dev
 ```
+
+The caregiver dashboard and patient kiosk UI will be available at [http://localhost:3000](http://localhost:3000).
+
+> **Note**: To use the real backend data, ensure that `NEXT_PUBLIC_USE_MOCK=false` in your `frontend/.env` file.
