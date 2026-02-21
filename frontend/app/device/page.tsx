@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
+// ─── Config ───────────────────────────────────────────────────────────────────
+
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
@@ -10,9 +12,13 @@ const BACKEND_URL =
 const POST_TTS_DELAY_MS = 350
 const RESIDENT_NAME = "Simone"
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type State = "idle" | "recording" | "transcribing" | "speaking" | "error"
 
-function delay(ms: number): Promise<void> {
+// ─── API helpers ──────────────────────────────────────────────────────────────
+
+function pause(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
@@ -20,7 +26,7 @@ async function transcribeBlob(blob: Blob): Promise<string> {
   const form = new FormData()
   form.append("audio", blob, "recording.webm")
   const res = await fetch(`${BACKEND_URL}/api/stt/transcribe`, { method: "POST", body: form })
-  if (!res.ok) throw new Error(`STT ${res.status}: ${await res.text()}`)
+  if (!res.ok) throw new Error(`STT error ${res.status}`)
   return ((await res.json()) as { text: string }).text ?? ""
 }
 
@@ -30,112 +36,108 @@ async function speakText(text: string, onStart?: () => void, onEnd?: () => void)
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   })
-  if (!res.ok) throw new Error(`TTS ${res.status}: ${await res.text()}`)
+  if (!res.ok) throw new Error(`TTS error ${res.status}`)
   const audioCtx = new AudioContext()
-  const audioBuffer = await audioCtx.decodeAudioData(await res.arrayBuffer())
-  const source = audioCtx.createBufferSource()
-  source.buffer = audioBuffer
-  source.connect(audioCtx.destination)
+  const buf = await audioCtx.decodeAudioData(await res.arrayBuffer())
+  const src = audioCtx.createBufferSource()
+  src.buffer = buf
+  src.connect(audioCtx.destination)
   await new Promise<void>((resolve, reject) => {
-    source.onended = () => resolve()
-    try { onStart?.(); source.start(0) } catch (e) { reject(e) }
+    src.onended = () => resolve()
+    try { onStart?.(); src.start(0) } catch (e) { reject(e) }
   })
   onEnd?.()
   await audioCtx.close()
 }
 
-// ── State-based design tokens ──────────────────────────────────────────────────
+// ─── Design tokens per state ──────────────────────────────────────────────────
 
-const ORB_BG: Record<State, string> = {
-  idle:         "bg-indigo-600",
-  recording:    "bg-emerald-500",
-  transcribing: "bg-amber-500",
-  speaking:     "bg-violet-600",
-  error:        "bg-red-600",
+const TOKEN = {
+  idle:         { orb: "#4f46e5", glow: "rgba(99,102,241,0.5)",  ring: "rgba(99,102,241,0.25)",  label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
+  recording:    { orb: "#059669", glow: "rgba(16,185,129,0.55)", ring: "rgba(16,185,129,0.25)",  label: "Listening…",              sub: "Tap again to stop" },
+  transcribing: { orb: "#d97706", glow: "rgba(245,158,11,0.5)",  ring: "rgba(245,158,11,0.25)",  label: "Processing…",            sub: "One moment…" },
+  speaking:     { orb: "#7c3aed", glow: "rgba(139,92,246,0.55)", ring: "rgba(139,92,246,0.25)",  label: "Speaking…",              sub: "" },
+  error:        { orb: "#dc2626", glow: "rgba(239,68,68,0.45)",  ring: "rgba(239,68,68,0.2)",    label: "Tap to try again",        sub: "" },
+} satisfies Record<State, { orb: string; glow: string; ring: string; label: string; sub: string }>
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Clock() {
+  const [time, setTime] = useState("")
+  useEffect(() => {
+    const fmt = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    setTime(fmt())
+    const id = setInterval(() => setTime(fmt()), 15_000)
+    return () => clearInterval(id)
+  }, [])
+  return <>{time}</>
 }
 
-const ORB_GLOW: Record<State, string> = {
-  idle:         "shadow-[0_0_80px_20px_rgba(99,102,241,0.35)]",
-  recording:    "shadow-[0_0_80px_20px_rgba(16,185,129,0.45)]",
-  transcribing: "shadow-[0_0_80px_20px_rgba(245,158,11,0.40)]",
-  speaking:     "shadow-[0_0_80px_20px_rgba(139,92,246,0.40)]",
-  error:        "shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
-}
-
-const ORB_RING: Record<State, string> = {
-  idle:         "ring-indigo-400/30",
-  recording:    "ring-emerald-400/40",
-  transcribing: "ring-amber-400/30",
-  speaking:     "ring-violet-400/30",
-  error:        "ring-red-400/30",
-}
-
-const LABEL: Record<State, string> = {
-  idle:         `Hello, ${RESIDENT_NAME}`,
-  recording:    "Listening…",
-  transcribing: "Processing…",
-  speaking:     "Speaking…",
-  error:        "Something went wrong",
-}
-
-const SUBLABEL: Record<State, string> = {
-  idle:         "Tap the circle to speak",
-  recording:    "Tap again to stop",
-  transcribing: "One moment…",
-  speaking:     "",
-  error:        "Tap to try again",
-}
-
-// ── Soundbar ───────────────────────────────────────────────────────────────────
-
-function Soundbars({ heights, duration = "0.65s" }: { heights: number[]; duration?: string }) {
+function Bars({ n, heights, delay, dur }: { n: number; heights: number[]; delay: number; dur: string }) {
   return (
-    <div className="flex items-center gap-2">
-      {heights.map((h, i) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
-          className="soundbar rounded-full bg-white/90"
-          style={{ width: 12, height: h, animationDelay: `${i * 0.13}s`, animationDuration: duration }}
+          className="bar"
+          style={{
+            width: 13,
+            height: heights[i % heights.length],
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.9)",
+            animationDelay: `${delay + i * 0.13}s`,
+            animationDuration: dur,
+          }}
         />
       ))}
     </div>
   )
 }
 
-// ── Clock ──────────────────────────────────────────────────────────────────────
-
-function Clock() {
-  const [time, setTime] = useState("")
-  useEffect(() => {
-    const fmt = () =>
-      new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-    setTime(fmt())
-    const id = setInterval(() => setTime(fmt()), 10_000)
-    return () => clearInterval(id)
-  }, [])
-  return <span className="text-white/40 text-lg font-light tabular-nums">{time}</span>
+function OrbIcon({ state }: { state: State }) {
+  if (state === "recording") return <Bars n={5} heights={[36, 60, 48, 60, 36]} delay={0} dur="0.6s" />
+  if (state === "speaking")  return <Bars n={5} heights={[44, 72, 56, 72, 44]} delay={0} dur="0.65s" />
+  if (state === "transcribing") return (
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
+      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
+      <path d="M4 12a8 8 0 018-8v8H4z" fill="rgba(255,255,255,0.85)"/>
+    </svg>
+  )
+  if (state === "error") return (
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  )
+  // idle — mic
+  return (
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+    </svg>
+  )
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DevicePage() {
   const [state, setState] = useState<State>("idle")
-  const [transcript, setTranscript] = useState("")
-  const [message, setMessage] = useState("")
-  const [errorMsg, setErrorMsg] = useState("")
-  const [ttsInput, setTtsInput] = useState("")
-  const [showTts, setShowTts] = useState(false)
+  const [transcript, setTranscript]   = useState("")
+  const [message, setMessage]         = useState("")
+  const [errorMsg, setErrorMsg]       = useState("")
+  const [ttsInput, setTtsInput]       = useState("")
+  const [showTts, setShowTts]         = useState(false)
+  const [showHelp, setShowHelp]       = useState(false)
 
-  const isSpeakingRef = useRef(false)
+  const speakingRef = useRef(false)
   const recorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  const chunksRef   = useRef<Blob[]>([])
 
-  // ── Recording ──────────────────────────────────────────────────────────────
+  const tok = TOKEN[state]
+
+  // ── Recording ────────────────────────────────────────────────────────────────
 
   const startRecording = useCallback(async () => {
-    if (isSpeakingRef.current || state !== "idle") return
-    setErrorMsg("")
-    setTranscript("")
+    if (speakingRef.current || state !== "idle") return
+    setErrorMsg(""); setTranscript("")
 
     let stream: MediaStream
     try {
@@ -158,12 +160,10 @@ export default function DevicePage() {
         setTranscript(text)
         setState("idle")
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setErrorMsg(msg)
+        setErrorMsg(err instanceof Error ? err.message : "Transcription failed")
         setState("error")
       }
     }
-
     recorderRef.current = recorder
     recorder.start()
     setState("recording")
@@ -171,8 +171,7 @@ export default function DevicePage() {
 
   const stopRecording = useCallback(() => {
     const r = recorderRef.current
-    if (!r || r.state === "inactive") return
-    r.stop()
+    if (r && r.state !== "inactive") r.stop()
   }, [])
 
   const handleOrbTap = useCallback(() => {
@@ -180,188 +179,317 @@ export default function DevicePage() {
     else if (state === "recording") stopRecording()
   }, [state, startRecording, stopRecording])
 
-  // ── TTS ────────────────────────────────────────────────────────────────────
+  // ── TTS ──────────────────────────────────────────────────────────────────────
 
   const handleSpeak = useCallback(async (text: string) => {
     if (!text.trim() || state === "recording" || state === "transcribing" || state === "speaking") return
     setErrorMsg("")
     setState("speaking")
-    isSpeakingRef.current = true
+    speakingRef.current = true
     setMessage(text)
     try {
       await speakText(text)
-      await delay(POST_TTS_DELAY_MS)
+      await pause(POST_TTS_DELAY_MS)
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err))
+      setErrorMsg(err instanceof Error ? err.message : "TTS failed")
       setState("error")
     } finally {
-      isSpeakingRef.current = false
+      speakingRef.current = false
       setMessage("")
-      if (state !== "error") setState("idle")
+      setState((s) => s === "error" ? "error" : "idle")
     }
-  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state])
 
-  // ── Help ───────────────────────────────────────────────────────────────────
-
-  const [showHelp, setShowHelp] = useState(false)
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const orbTappable = state === "idle" || state === "recording" || state === "error"
 
   return (
-    <div className="h-screen w-full bg-gray-950 flex flex-col items-center justify-between py-8 px-6 select-none overflow-hidden">
+    <>
+      {/* ── Keyframes ──────────────────────────────────────────────────────────── */}
+      <style>{`
+        @keyframes bar   { from{transform:scaleY(0.2)} to{transform:scaleY(1)} }
+        @keyframes spin  { to{transform:rotate(360deg)} }
+        @keyframes rings {
+          0%   { transform:scale(1);   opacity:.55 }
+          100% { transform:scale(1.9); opacity:0   }
+        }
+        .bar { animation: bar ease-in-out infinite alternate; }
+      `}</style>
 
-      {/* ── Top bar ──────────────────────────────────────────────────────────── */}
-      <div className="w-full flex items-center justify-between max-w-sm">
-        <Clock />
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/[0.08]">
-          <span className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-            state === "idle"         ? "bg-gray-500" :
-            state === "recording"   ? "bg-emerald-400 animate-pulse" :
-            state === "transcribing"? "bg-amber-400 animate-pulse" :
-            state === "speaking"    ? "bg-violet-400 animate-pulse" :
-                                      "bg-red-400"
-          }`} />
-          <span className="text-white/50 text-sm font-medium capitalize tracking-wide">{state}</span>
-        </div>
-      </div>
+      {/* ── Root ───────────────────────────────────────────────────────────────── */}
+      <div style={{
+        height: "100%",
+        width: "100%",
+        background: "#030712",
+        display: "grid",
+        gridTemplateRows: "64px 1fr 96px",
+        overflow: "hidden",
+      }}>
 
-      {/* ── Centre section ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center gap-8 w-full max-w-sm flex-1 justify-center">
+        {/* ── Top bar ──────────────────────────────────────────────────────────── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 32px",
+        }}>
+          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, fontWeight: 300, fontVariantNumeric: "tabular-nums" }}>
+            <Clock />
+          </span>
 
-        {/* Orb */}
-        <button
-          onClick={handleOrbTap}
-          disabled={!orbTappable}
-          aria-label={state === "recording" ? "Stop recording" : "Start recording"}
-          className={[
-            "w-56 h-56 rounded-full flex items-center justify-center",
-            "ring-8 transition-all duration-500",
-            "focus:outline-none active:scale-95",
-            orbTappable ? "cursor-pointer" : "cursor-default",
-            ORB_BG[state],
-            ORB_GLOW[state],
-            ORB_RING[state],
-            state === "recording" ? "animate-pulse" : "",
-          ].join(" ")}
-        >
-          {/* Idle / Error — mic */}
-          {(state === "idle" || state === "error") && (
-            <svg className="w-24 h-24 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.3}>
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          )}
-
-          {/* Recording */}
-          {state === "recording" && (
-            <Soundbars heights={[40, 64, 52, 64, 40]} duration="0.6s" />
-          )}
-
-          {/* Transcribing — spinner */}
-          {state === "transcribing" && (
-            <svg className="w-20 h-20 text-white/90 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-          )}
-
-          {/* Speaking */}
-          {state === "speaking" && (
-            <Soundbars heights={[48, 72, 60, 72, 48]} duration="0.65s" />
-          )}
-        </button>
-
-        {/* Labels */}
-        <div className="text-center space-y-2 px-4 w-full">
-          <p className="text-white text-4xl font-bold tracking-tight leading-tight">
-            {LABEL[state]}
-          </p>
-          {message ? (
-            <p className="text-white/75 text-xl leading-relaxed mt-2">{message}</p>
-          ) : (
-            <p className="text-white/40 text-xl">{SUBLABEL[state]}</p>
-          )}
+          {/* Status pill */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "8px 18px", borderRadius: 999,
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: tok.orb,
+              boxShadow: `0 0 6px ${tok.glow}`,
+              animation: state !== "idle" && state !== "error" ? "bar 1s ease-in-out infinite alternate" : undefined,
+            }}/>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 500, textTransform: "capitalize", letterSpacing: "0.04em" }}>
+              {state}
+            </span>
+          </div>
         </div>
 
-        {/* Transcript */}
-        {transcript && state === "idle" && (
-          <div className="w-full rounded-3xl bg-white/[0.06] border border-white/[0.08] px-6 py-5">
-            <p className="text-xs font-semibold tracking-widest text-white/25 uppercase mb-2">You said</p>
-            <p className="text-white text-lg leading-relaxed">{transcript}</p>
-          </div>
-        )}
+        {/* ── Center ───────────────────────────────────────────────────────────── */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 36,
+          padding: "0 32px",
+        }}>
 
-        {/* Error message */}
-        {state === "error" && errorMsg && (
-          <div className="w-full rounded-3xl bg-red-950/60 border border-red-500/20 px-6 py-4">
-            <p className="text-red-300 text-base leading-relaxed">{errorMsg}</p>
-          </div>
-        )}
+          {/* Orb */}
+          <button
+            onClick={handleOrbTap}
+            disabled={!orbTappable}
+            aria-label={state === "recording" ? "Stop recording" : "Start recording"}
+            style={{
+              position: "relative",
+              width: 240,
+              height: 240,
+              minWidth: 240,
+              borderRadius: "50%",
+              background: tok.orb,
+              boxShadow: `0 0 80px 16px ${tok.glow}`,
+              border: `8px solid ${tok.ring}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: orbTappable ? "pointer" : "default",
+              transition: "background 0.4s, box-shadow 0.4s, border-color 0.4s",
+              outline: "none",
+              flexShrink: 0,
+            }}
+          >
+            {/* Expanding ring animation when recording */}
+            {state === "recording" && (
+              <>
+                <div style={{
+                  position: "absolute", inset: -2, borderRadius: "50%",
+                  border: `3px solid ${tok.glow}`,
+                  animation: "rings 1.4s ease-out infinite",
+                }}/>
+                <div style={{
+                  position: "absolute", inset: -2, borderRadius: "50%",
+                  border: `3px solid ${tok.glow}`,
+                  animation: "rings 1.4s ease-out 0.7s infinite",
+                }}/>
+              </>
+            )}
+            <OrbIcon state={state} />
+          </button>
 
-        {/* TTS panel — hidden by default, accessible via small button */}
-        {showTts && (
-          <div className="w-full flex flex-col gap-3">
-            <div className="flex gap-2">
+          {/* Text block */}
+          <div style={{ textAlign: "center", width: "100%", maxWidth: 480 }}>
+            <p style={{
+              color: "#ffffff",
+              fontSize: 48,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.15,
+              margin: 0,
+              marginBottom: 12,
+            }}>
+              {state === "speaking" && message ? message : tok.label}
+            </p>
+            {tok.sub && state !== "speaking" && (
+              <p style={{
+                color: "rgba(255,255,255,0.38)",
+                fontSize: 22,
+                fontWeight: 400,
+                margin: 0,
+              }}>
+                {tok.sub}
+              </p>
+            )}
+            {state === "error" && errorMsg && (
+              <p style={{
+                color: "rgba(252,165,165,0.85)",
+                fontSize: 16,
+                marginTop: 12,
+                lineHeight: 1.5,
+              }}>
+                {errorMsg}
+              </p>
+            )}
+          </div>
+
+          {/* Transcript card */}
+          {transcript && state === "idle" && (
+            <div style={{
+              width: "100%", maxWidth: 480,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 20,
+              padding: "18px 24px",
+              textAlign: "left",
+            }}>
+              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
+                You said
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, lineHeight: 1.5, margin: 0 }}>
+                {transcript}
+              </p>
+            </div>
+          )}
+
+          {/* TTS panel */}
+          {showTts && (
+            <div style={{
+              width: "100%", maxWidth: 480,
+              display: "flex", gap: 10,
+            }}>
               <textarea
                 value={ttsInput}
                 onChange={(e) => setTtsInput(e.target.value)}
                 rows={2}
                 placeholder="Type something to speak…"
-                className="flex-1 rounded-2xl bg-white/[0.06] border border-white/[0.08] px-4 py-3 text-white text-base resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/60 placeholder:text-white/25"
+                style={{
+                  flex: 1,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 16,
+                  padding: "12px 16px",
+                  color: "#fff",
+                  fontSize: 15,
+                  resize: "none",
+                  outline: "none",
+                  fontFamily: "inherit",
+                }}
               />
               <button
                 onClick={() => handleSpeak(ttsInput)}
                 disabled={state !== "idle" || !ttsInput.trim()}
-                className="px-5 rounded-2xl bg-violet-600 text-white font-bold text-base hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
+                style={{
+                  width: 52, height: "100%",
+                  minHeight: 56,
+                  borderRadius: 14,
+                  background: "#7c3aed",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  flexShrink: 0,
+                  opacity: (state !== "idle" || !ttsInput.trim()) ? 0.4 : 1,
+                }}
               >
                 ▶
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* ── Bottom bar ───────────────────────────────────────────────────────── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 24px",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+        }}>
+
+          {/* TTS toggle — subtle, developer-facing */}
+          <button
+            onClick={() => setShowTts((v) => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "10px 18px",
+              borderRadius: 12,
+              background: showTts ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              color: "rgba(255,255,255,0.3)",
+              fontSize: 13, fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+            </svg>
+            TTS test
+          </button>
+
+          {/* Help — prominent, always visible */}
+          <button
+            onClick={() => setShowHelp(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "16px 28px",
+              borderRadius: 18,
+              background: "rgba(239,68,68,0.12)",
+              border: "1.5px solid rgba(239,68,68,0.3)",
+              color: "rgba(252,165,165,0.9)",
+              fontSize: 18, fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "0.01em",
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4m0 4h.01"/>
+            </svg>
+            I need help
+          </button>
+        </div>
       </div>
 
-      {/* ── Bottom controls ───────────────────────────────────────────────────── */}
-      <div className="w-full max-w-sm flex items-center justify-between">
-
-        {/* TTS toggle — subtle */}
-        <button
-          onClick={() => setShowTts((v) => !v)}
-          className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/[0.05] border border-white/[0.07] text-white/35 text-sm font-medium hover:text-white/60 hover:bg-white/[0.08] active:scale-95 transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0c-1.657 0-3-1.343-3-3V9a3 3 0 016 0v6c0 1.657-1.343 3-3 3z" />
-          </svg>
-          TTS
-        </button>
-
-        {/* Help */}
-        <button
-          onClick={() => setShowHelp(true)}
-          className="flex items-center gap-2.5 px-6 py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 text-lg font-semibold hover:bg-red-500/20 active:scale-95 transition-all"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          I need help
-        </button>
-      </div>
-
-      {/* ── Help modal ────────────────────────────────────────────────────────── */}
+      {/* ── Help modal ─────────────────────────────────────────────────────────── */}
       {showHelp && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-8 z-50">
-          <div className="bg-gray-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl">
-            <p className="text-white text-2xl font-semibold leading-snug">
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,0.8)",
+          backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 32, zIndex: 50,
+        }}>
+          <div style={{
+            background: "#111827",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 28,
+            padding: 40,
+            maxWidth: 400,
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+          }}>
+            <p style={{ color: "#fff", fontSize: 26, fontWeight: 600, lineHeight: 1.35, margin: "0 0 32px" }}>
               Do you need assistance?
             </p>
-            <div className="flex flex-col gap-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <button
                 onClick={() => setShowHelp(false)}
-                className="w-full py-5 rounded-2xl bg-indigo-600 text-white text-xl font-bold hover:bg-indigo-500 active:scale-95 transition-all"
+                style={{
+                  padding: "20px 24px", borderRadius: 18,
+                  background: "#4f46e5", border: "none",
+                  color: "#fff", fontSize: 20, fontWeight: 700,
+                  cursor: "pointer",
+                }}
               >
                 I&apos;m fine, close
               </button>
@@ -370,7 +498,12 @@ export default function DevicePage() {
                   setShowHelp(false)
                   handleSpeak("Your caregiver has been notified and will be with you soon.")
                 }}
-                className="w-full py-5 rounded-2xl bg-red-600 text-white text-xl font-bold hover:bg-red-500 active:scale-95 transition-all"
+                style={{
+                  padding: "20px 24px", borderRadius: 18,
+                  background: "#dc2626", border: "none",
+                  color: "#fff", fontSize: 20, fontWeight: 700,
+                  cursor: "pointer",
+                }}
               >
                 Notify my caregiver →
               </button>
@@ -378,17 +511,6 @@ export default function DevicePage() {
           </div>
         </div>
       )}
-
-      {/* Soundbar keyframe */}
-      <style>{`
-        .soundbar {
-          animation: sb 0.65s ease-in-out infinite alternate;
-        }
-        @keyframes sb {
-          from { transform: scaleY(0.25); }
-          to   { transform: scaleY(1); }
-        }
-      `}</style>
-    </div>
+    </>
   )
 }
