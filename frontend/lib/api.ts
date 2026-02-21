@@ -50,7 +50,10 @@ async function request<T>(
 
 export async function getCaregiver(id: string): Promise<Caregiver> {
   if (USE_MOCK) return mockCaregiver
-  return request<Caregiver>(`/api/caregivers/${id}`)
+  const list = await request<Caregiver[]>("/api/caregivers")
+  const found = list.find((c) => c.id === id)
+  if (!found) throw new Error(`Caregiver ${id} not found`)
+  return found
 }
 
 export async function createCaregiver(data: Omit<Caregiver, "id" | "created_at">): Promise<Caregiver> {
@@ -102,7 +105,7 @@ function isNetworkError(err: unknown): boolean {
 export async function getCalendarItems(careReceiverId: string): Promise<CalendarItem[]> {
   if (USE_MOCK) return mockCalendarItems
   try {
-    return await request<CalendarItem[]>(`/api/calendar-items?care_receiver_id=${careReceiverId}`)
+    return await request<CalendarItem[]>(`/api/reminders?care_receiver_id=${careReceiverId}`)
   } catch (err) {
     if (isNetworkError(err)) return mockCalendarItems
     throw err
@@ -121,7 +124,7 @@ export async function createCalendarItem(data: CreateCalendarItemPayload): Promi
     return item
   }
   try {
-    return await request<CalendarItem>("/api/calendar-items", {
+    return await request<CalendarItem>("/api/reminders", {
       method: "POST",
       body: JSON.stringify(data),
     })
