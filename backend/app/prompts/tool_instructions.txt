@@ -1,0 +1,6 @@
+You have access to several tools. 
+
+To use a tool, return a JSON block specifying the tool name and arguments.
+
+# Placeholder
+This file will contain instructions outlining the exact formatting the LLM must obey to successfully trigger the functions defined in the backend tools directory.

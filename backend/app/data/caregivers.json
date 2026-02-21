@@ -1,0 +1,11 @@
+[
+    {
+        "id": "cg_1",
+        "name": "Sarah Doe",
+        "relation": "Daughter",
+        "phone": "+1234567890",
+        "telegram_id": "12345678",
+        "email": "sarah.doe@example.com",
+        "is_primary": true
+    }
+]
