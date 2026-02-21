@@ -3,6 +3,6 @@ uvicorn
 python-dotenv
 pydantic
 requests
-google-generativeai
+google-genai
 elevenlabs
 stripe
