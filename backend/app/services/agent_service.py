@@ -6,14 +6,16 @@ Responsibilities:
 - Maintain dialogue state and decide when to use specific functions.
 """
 import json
-import re
 from pathlib import Path
 
 from google.genai import types
 
 from app.core.constants import BASE_DIR
 from app.services.llm_service import create_chat, TOOL_MAP
-from app.services.json_store_service import get_patient_context, get_conversations, save_conversations
+from app.services.json_store_service import (
+    get_patient_context, get_conversations, save_conversations, append_to_conversation,
+    get_reminders, get_calendar_items, get_device_actions
+)
 
 from app.models.schemas import HistoryItem
 
@@ -46,24 +48,6 @@ def _get_or_create_chat(session_id: str):
         _active_chats[session_id] = create_chat(system_instruction)
     return _active_chats[session_id]
 
-def _strip_markdown(text: str) -> str:
-    """Remove markdown formatting so TTS reads clean natural speech."""
-    # Bold and italic: **text**, *text*, __text__, _text_
-    text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
-    text = re.sub(r'_{1,3}(.+?)_{1,3}', r'\1', text)
-    # Headers: ## Title → Title
-    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
-    # Bullet points: * item, - item, • item → item (keep the text, drop the symbol)
-    text = re.sub(r'^\s*[\*\-•]\s+', '', text, flags=re.MULTILINE)
-    # Numbered lists: 1. item → item
-    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
-    # Inline code and code blocks
-    text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
-    # Collapse multiple blank lines into one
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text.strip()
-
-
 def process_user_message(session_id: str, message: str) -> str:
     """
     Sends a message to the agent, handles any necessary tool calls iteratively,
@@ -73,9 +57,42 @@ def process_user_message(session_id: str, message: str) -> str:
         chat = _get_or_create_chat(session_id)
     except RuntimeError as e:
         return f"Erreur de configuration: {str(e)}"
+    # --- INJECTION DU CONTEXTE ENVIRONNEMENTAL (Inisible pour l'utilisateur) ---
+    from datetime import datetime
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Récupération des données temps-réel
+    reminders = get_reminders()
+    calendar = get_calendar_items()
+    devices = get_device_actions()
+    
+    env_context = f"\n[CONTEXTE ENVIRONNEMENTAL TEMPS RÉEL]\nHeure locale précise : {current_time_str}\n"
+    
+    if reminders:
+        env_context += "- Rappels récurrents configurés :\n"
+        for r in reminders:
+            env_context += f"  * {r.get('title')} ({r.get('scheduled_time')} - {r.get('repeat_rule')})\n"
+            
+    if calendar:
+        env_context += "- Événements / Audio prévus dans le calendrier :\n"
+        for c in calendar:
+            env_context += f"  * {c.get('title')} prévu à {c.get('scheduled_at')} (Status: {c.get('status')})\n"
+            
+    if devices:
+        env_context += "- Notifications/Actions en attente sur l'appareil du patient :\n"
+        for d in devices:
+            env_context += f"  * Action en attente ({d.get('kind')}): {d.get('text_to_speak')}\n"
+            
+    env_context += "[FIN DU CONTEXTE ENVIRONNEMENTAL]\n\n"
+    
+    augmented_message = env_context + message
+    # ---------------------------------------------------------------------------
+    
+    # Historisation du prompt de l'utilisateur dans le JSON métier (sans le blabla d'environnement)
+    append_to_conversation(session_id, "user", message)
 
     try:
-        response = chat.send_message(message)
+        response = chat.send_message(augmented_message)
     except Exception as e:
         return f"Erreur de l'agent LLM: {str(e)}"
 
@@ -103,7 +120,11 @@ def process_user_message(session_id: str, message: str) -> str:
 
         response = chat.send_message(function_responses)
 
-    return _strip_markdown(response.text)
+    final_text = response.text
+    # Historisation de la réponse finale de l'assistant dans le JSON métier
+    append_to_conversation(session_id, "assistant", final_text)
+
+    return final_text
 
 def get_session_history(session_id: str) -> list[HistoryItem]:
     """Retrieve history from the active chat state."""

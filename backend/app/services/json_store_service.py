@@ -97,3 +97,27 @@ def get_health_logs() -> List[Dict[str, Any]]:
 
 def save_health_logs(logs: List[Dict[str, Any]]):
     _write_json(constants.HEALTH_LOGS_FILE, logs)
+
+def append_to_conversation(session_id: str, role: str, content: str):
+    """
+    Ajoute de manière sûre un message à l'historique d'une conversation précise dans le JSON.
+    """
+    from datetime import datetime
+    with lock:
+        conversations = get_conversations()
+        
+        session_conv = next((c for c in conversations if c.get("session_id") == session_id), None)
+        if not session_conv:
+            session_conv = {
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat() + "Z",
+                "messages": []
+            }
+            conversations.append(session_conv)
+            
+        session_conv["messages"].append({
+            "role": role,
+            "content": content
+        })
+        
+        save_conversations(conversations)

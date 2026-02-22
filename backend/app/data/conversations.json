@@ -1,1 +1,60 @@
-[]
+[
+    {
+        "session_id": "default_patient_session",
+        "timestamp": "2026-02-22T03:10:18.977880Z",
+        "messages": [
+            {
+                "role": "assistant",
+                "content": "Coucou ! C'est l'heure de notre petit jeu quotidien ! Est-ce que tu es prêt ?"
+            },
+            {
+                "role": "assistant",
+                "content": "Coucou ! C'est l'heure de notre petit jeu quotidien ! Est-ce que tu es prêt ?"
+            }
+        ]
+    },
+    {
+        "session_id": "test_session_time",
+        "timestamp": "2026-02-22T03:11:46.474919Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Il est quelle heure juste là ?"
+            }
+        ]
+    },
+    {
+        "session_id": "test_env_context",
+        "timestamp": "2026-02-22T03:15:07.736496Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Fais un point sur mon environnement actuel. Est-ce que j'ai des trucs prévus ou en attente ?"
+            }
+        ]
+    },
+    {
+        "session_id": "test_e2e_session",
+        "timestamp": "2026-02-22T03:17:18.790518Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Cherche sur le web quelles sont les dernières actualités sportives (ou n'importe quelles bonnes nouvelles) et résume-les moi."
+            },
+            {
+                "role": "user",
+                "content": "Fais un point sur ma journée. Qu'est-ce que j'ai de prévu et ai-je des notifications ?"
+            }
+        ]
+    },
+    {
+        "session_id": "agent_background_routine",
+        "timestamp": "2026-02-22T03:17:19.002809Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "C'est le matin ! Peux-tu utiliser ton outil de recherche web pour chercher la météo générale en France et 2 vraies actualités très positives et récentes dans le monde ? Rédige un petit briefing matinal pour le patient."
+            }
+        ]
+    }
+]

@@ -97,12 +97,14 @@ class HealthLog(BaseModel):
     mood: str
     medication_taken: bool
     notes: str
+    category: str = "GENERAL"
 
 class HealthLogCreate(BaseModel):
     date: str
     mood: str
     medication_taken: bool
     notes: Optional[str] = ""
+    category: str = "GENERAL"
 
 # --- CHAT ENDPOINTS ---
 class ChatMessage(BaseModel):

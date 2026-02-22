@@ -12,7 +12,7 @@ from app.services import json_store_service
 from app.tools import register_tool
 
 @register_tool
-def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "") -> Dict[str, Any]:
+def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "", category: str = "GENERAL") -> Dict[str, Any]:
     """
     Sauvegarde l'humeur et l'état médical perçu du patient dans son fichier de suivi quotidien.
     """
@@ -23,7 +23,8 @@ def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "
         "date": today,
         "mood": mood,
         "medication_taken": medication_taken,
-        "notes": notes
+        "notes": notes,
+        "category": category
     }
 
     with json_store_service.lock:
