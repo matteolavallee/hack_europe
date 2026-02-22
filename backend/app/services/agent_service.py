@@ -30,7 +30,7 @@ def _strip_markdown(text: str) -> str:
     text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
     text = re.sub(r'_{1,3}(.+?)_{1,3}', r'\1', text)
     # Trailing ** (e.g., "things:**") without opening - remove trailing **
-    text = re.sub(r'(\S)\*{2,}$', r'\1', text)
+    text = re.sub(r'(\S)\*{2,}\s*', r'\1', text)
     # Headers: ## Title → Title
     text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
     # Bullet points: * item, - item, • item → item (keep the text, drop the symbol)
