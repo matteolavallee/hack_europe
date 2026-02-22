@@ -24,6 +24,5 @@ else:
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 WAPICLOUD_URL = os.getenv("WAPICLOUD_URL", "")
 WAPICLOUD_TOKEN = os.getenv("WAPICLOUD_TOKEN", "")

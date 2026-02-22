@@ -58,6 +58,14 @@
             {
                 "role": "user",
                 "content": "hello"
+            },
+            {
+                "role": "user",
+                "content": "hello"
+            },
+            {
+                "role": "assistant",
+                "content": "Hello there! It's lovely to hear from you. How are you doing this morning?"
             }
         ]
     },
