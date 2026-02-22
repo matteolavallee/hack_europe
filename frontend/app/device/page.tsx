@@ -104,7 +104,11 @@ async function ackAction(actionId: string): Promise<void> {
 }
 
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
-  if (!ELEVENLABS_API_KEY) throw new Error("NEXT_PUBLIC_ELEVENLABS_API_KEY is not set.")
+  if (!ELEVENLABS_API_KEY) {
+    throw new Error(
+      "Voice non configurée. Ajoute NEXT_PUBLIC_ELEVENLABS_API_KEY dans les variables d'environnement Vercel (Settings > Environment Variables)."
+    )
+  }
 
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,

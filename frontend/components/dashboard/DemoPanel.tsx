@@ -34,7 +34,9 @@ export function DemoPanel() {
           size="sm"
           loading={loading === "Reminder"}
           onClick={() =>
-            run("Reminder", () => triggerReminderNow(CARE_RECEIVER_ID))
+            run("Reminder", async () => {
+              await triggerReminderNow(CARE_RECEIVER_ID)
+            })
           }
         >
           🔔 Trigger Reminder Now
@@ -45,9 +47,9 @@ export function DemoPanel() {
           size="sm"
           loading={loading === "Exercise"}
           onClick={() =>
-            run("Exercise", () =>
-              triggerSuggestion(CARE_RECEIVER_ID, "exercise"),
-            )
+            run("Exercise", async () => {
+              await triggerSuggestion(CARE_RECEIVER_ID, "exercise")
+            })
           }
         >
           🧠 Suggest Exercise
@@ -58,9 +60,9 @@ export function DemoPanel() {
           size="sm"
           loading={loading === "Message"}
           onClick={() =>
-            run("Message", () =>
-              triggerSuggestion(CARE_RECEIVER_ID, "message"),
-            )
+            run("Message", async () => {
+              await triggerSuggestion(CARE_RECEIVER_ID, "message")
+            })
           }
         >
           🎵 Suggest Audio Message

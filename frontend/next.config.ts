@@ -1,12 +1,18 @@
 /// <reference types="node" />
 import type { NextConfig } from "next";
 import { loadEnvConfig } from "@next/env";
+import path from "node:path";
 
 const isLocal = process.env.VERCEL !== "1";
 
+// En local, charger .env du répertoire parent (monorepo). Sur Vercel, ignoré.
 if (isLocal) {
-  const projectDir = process.cwd();
-  loadEnvConfig(projectDir + "/../");
+  try {
+    const projectDir = process.cwd();
+    loadEnvConfig(path.resolve(projectDir, ".."));
+  } catch {
+    // Ignore si le fichier parent n'existe pas
+  }
 }
 
 const nextConfig: NextConfig = {

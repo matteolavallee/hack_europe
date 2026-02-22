@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
+import { EnvConfigBanner } from "@/components/EnvConfigBanner"
 
 export const metadata: Metadata = {
   title: "CareLoop",
@@ -20,7 +21,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <EnvConfigBanner />
+        {children}
+      </body>
     </html>
   )
 }
