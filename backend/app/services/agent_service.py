@@ -3,9 +3,10 @@ This module encapsulates the core reasoning agent.
 
 Responsibilities:
 - Act as the central brain orchestrating the LLM and the tools.
-- Maintain dialogue state and decide when to use specific functions.
+- Maintain dialogue state and decide when to use specific function calls.
 """
 import json
+import re
 from pathlib import Path
 
 from google.genai import types
@@ -21,6 +22,24 @@ from app.models.schemas import HistoryItem
 
 # Simple in-memory cache for chat SDK objects
 _active_chats = {}
+
+
+def _strip_markdown(text: str) -> str:
+    """Remove markdown formatting so TTS reads clean natural speech."""
+    # Bold and italic: **text**, *text*, __text__, _text_
+    text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
+    text = re.sub(r'_{1,3}(.+?)_{1,3}', r'\1', text)
+    # Headers: ## Title → Title
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Bullet points: * item, - item, • item → item (keep the text, drop the symbol)
+    text = re.sub(r'^\s*[\*\-•]\s+', '', text, flags=re.MULTILINE)
+    # Numbered lists: 1. item → item
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # Inline code and code blocks
+    text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
+    # Collapse multiple blank lines into one
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 def load_system_prompt() -> str:
     """Read the base prompt and dynamically append patient context."""
@@ -121,6 +140,8 @@ def process_user_message(session_id: str, message: str) -> str:
         response = chat.send_message(function_responses)
 
     final_text = response.text
+    # Strip markdown so TTS reads clean natural speech
+    final_text = _strip_markdown(final_text)
     # Historisation de la réponse finale de l'assistant dans le JSON métier
     append_to_conversation(session_id, "assistant", final_text)
 
