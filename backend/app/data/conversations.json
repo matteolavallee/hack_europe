@@ -138,5 +138,31 @@
                 "content": "J'ai mal à la tête depuis ce matin et je dois prendre mon doliprane à 18h."
             }
         ]
+    },
+    {
+        "session_id": "test_session_1",
+        "timestamp": "2026-02-22T10:00:13.272654Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello, who am I and where am I? What is the weather like?"
+            },
+            {
+                "role": "assistant",
+                "content": "It's okay, you are safe and in a familiar place. I am your assistant, here to help you. It's 10:00 AM on Sunday, February 22nd, 2026. The weather outside is sunny and a pleasant 22 degrees Celsius."
+            },
+            {
+                "role": "user",
+                "content": "Hello, who am I and where am I? What is the weather like?"
+            },
+            {
+                "role": "user",
+                "content": "Hello, who am I and where am I? What is the weather like?"
+            },
+            {
+                "role": "assistant",
+                "content": "Hello there! You are in a safe and comfortable place. It's a lovely Sunday, February 22nd, 2026, and the time is 10:04 AM. The weather outside is sunny and a pleasant 22°C. You are at your home."
+            }
+        ]
     }
 ]

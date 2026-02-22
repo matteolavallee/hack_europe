@@ -15,7 +15,7 @@ from app.core.constants import BASE_DIR
 from app.services.llm_service import create_chat, TOOL_MAP
 from app.services.json_store_service import (
     get_patient_context, get_conversations, save_conversations, append_to_conversation,
-    get_reminders, get_calendar_items, get_device_actions
+    get_reminders, get_calendar_items, get_device_actions, get_caregivers
 )
 
 from app.models.schemas import HistoryItem
@@ -86,8 +86,20 @@ def process_user_message(session_id: str, message: str) -> str:
     reminders = get_reminders()
     calendar = get_calendar_items()
     devices = get_device_actions()
+    caregivers = get_caregivers()
+    patient_context = get_patient_context()
+    
+    # Mock weather data
+    location = patient_context.get("home_address", "Unknown Location")
+    mock_weather = f"Sunny, 22°C in {location}"
 
     env_context = f"\n[REAL-TIME ENVIRONMENTAL CONTEXT]\nCurrent local time: {current_time_str}\n"
+    env_context += f"Current weather/location: {mock_weather}\n"
+
+    if caregivers:
+        env_context += "- Registered Caregivers / Contacts:\n"
+        for cg in caregivers:
+            env_context += f"  * {cg.get('name')} ({cg.get('relation')}) - {cg.get('context', '')}\n"
 
     if reminders:
         env_context += "- Configured recurring reminders:\n"
