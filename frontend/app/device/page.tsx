@@ -9,6 +9,11 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:8000"
 
+// ElevenLabs called directly from the browser (avoids datacenter IP blocks on free tier)
+const ELEVENLABS_API_KEY  = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY  ?? ""
+const ELEVENLABS_VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM"
+const ELEVENLABS_MODEL_ID = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL_ID ?? "eleven_turbo_v2"
+
 const POST_TTS_DELAY_MS = 350
 const RESIDENT_NAME = "Simone"
 
@@ -31,12 +36,25 @@ async function transcribeBlob(blob: Blob): Promise<string> {
 }
 
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
-  const res = await fetch(`${BACKEND_URL}/api/tts/speak`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  })
-  if (!res.ok) throw new Error(`TTS error ${res.status}`)
+  if (!ELEVENLABS_API_KEY) throw new Error("NEXT_PUBLIC_ELEVENLABS_API_KEY is not set.")
+
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: ELEVENLABS_MODEL_ID,
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    }
+  )
+  if (!res.ok) throw new Error(`TTS error ${res.status}: ${await res.text()}`)
   const audioCtx = new AudioContext()
   const buf = await audioCtx.decodeAudioData(await res.arrayBuffer())
   const src = audioCtx.createBufferSource()
