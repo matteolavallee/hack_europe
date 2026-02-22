@@ -9,31 +9,32 @@ from google import genai
 from google.genai import types
 
 from app.core.config import GEMINI_API_KEY, BASE_DIR
-from app.tools.schedule_reminder import schedule_reminder
-from app.tools.write_log import write_health_log
-from app.tools.contact_caregiver import contact_primary_caregiver
-from app.tools.get_temporal_context import get_temporal_context
-from app.tools.search_family_history import search_family_history
-from app.tools.play_audio import play_audio_content
-from app.tools.web_search import search_web
+
+# Import all tool modules so their @register_tool decorators fire.
+# To add a new tool to the agent: create a file in app/tools/ and decorate with @register_tool.
+import app.tools.schedule_reminder      # noqa: F401
+import app.tools.write_log              # noqa: F401
+import app.tools.get_temporal_context   # noqa: F401
+import app.tools.search_family_history  # noqa: F401
+import app.tools.play_audio             # noqa: F401
+import app.tools.send_whatsapp_message  # noqa: F401
+import app.tools.web_search             # noqa: F401
+# NOTE: contact_caregiver and update_context_tool are intentionally excluded:
+#   - contact_caregiver: Telegram placeholder, superseded by send_whatsapp_message
+#   - update_context_tool: onboarding-only, registered separately in create_onboarding_chat()
+
+from app.tools import get_registered_tools
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-AVAILABLE_TOOLS = [
-    schedule_reminder,
-    write_health_log,
-    contact_primary_caregiver,
-    get_temporal_context,
-    search_family_history,
-    play_audio_content,
-    search_web
-]
+AVAILABLE_TOOLS = get_registered_tools()
+TOOL_MAP = {fn.__name__: fn for fn in AVAILABLE_TOOLS}
 
-TOOL_MAP = {func.__name__: func for func in AVAILABLE_TOOLS}
 
 def create_chat(system_instruction: str):
     """
-    Creates a new stateful Gemini chat session with tools and system instructions.
+    Creates a new stateful Gemini chat session with all registered tools.
+    Adding a new tool: create a file in app/tools/, decorate with @register_tool.
     """
     if not client:
         raise RuntimeError("GEMINI_API_KEY is not configured.")
@@ -45,15 +46,18 @@ def create_chat(system_instruction: str):
         ),
     )
 
+
 from app.tools.update_context_tool import update_patient_context
+
 
 def create_onboarding_chat():
     """
-    Creates a new Gemini chat session specifically for the patient onboarding loop.
+    Creates a Gemini chat session for the patient onboarding loop.
+    Uses only update_patient_context — no main agent tools.
     """
     if not client:
         raise RuntimeError("GEMINI_API_KEY is not configured.")
-        
+
     prompt_path = BASE_DIR / "app" / "prompts" / "onboarding_prompt.txt"
     if prompt_path.exists():
         with open(prompt_path, "r", encoding="utf-8") as f:

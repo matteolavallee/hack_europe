@@ -9,6 +9,7 @@ Responsibilities:
 from typing import Dict, Any, Optional
 from app.services import json_store_service
 from app.services.whatsapp_service import send_whatsapp_message as _send_whatsapp
+from app.tools import register_tool
 
 
 def _fuzzy_match_recipient(recipient_name: str, caregivers: list) -> Optional[Dict[str, Any]]:
@@ -31,6 +32,7 @@ def _fuzzy_match_recipient(recipient_name: str, caregivers: list) -> Optional[Di
     return None
 
 
+@register_tool
 def send_whatsapp_message(recipient_name: str, message_content: str) -> Dict[str, Any]:
     """
     Envoie un message WhatsApp au contact indiqué.

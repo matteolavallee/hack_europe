@@ -9,7 +9,9 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 from app.services import json_store_service
+from app.tools import register_tool
 
+@register_tool
 def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "") -> Dict[str, Any]:
     """
     Sauvegarde l'humeur et l'état médical perçu du patient dans son fichier de suivi quotidien.

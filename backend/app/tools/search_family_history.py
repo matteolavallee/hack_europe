@@ -5,6 +5,7 @@ Responsibilities:
 - Provide the LLM with safe access to the pre-filled life history of the patient.
 """
 from typing import Dict, Any
+from app.tools import register_tool
 
 # Mock database - en production on utiliserait json_store_service avec family_history.json
 FAMILY_MEMORY_DB = {
@@ -15,6 +16,7 @@ FAMILY_MEMORY_DB = {
     "maison": "J'habite cette maison depuis 20 ans, j'aime beaucoup m'occuper des rosiers dans le jardin."
 }
 
+@register_tool
 def search_family_history(keyword: str) -> Dict[str, Any]:
     """
     Recherche un souvenir ou une information sur le passé du patient (ex. mots clés: animaux, enfants, mariage, métier, maison).

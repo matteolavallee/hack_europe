@@ -6,7 +6,9 @@ Responsibilities:
 """
 import logging
 from duckduckgo_search import DDGS
+from app.tools import register_tool
 
+@register_tool
 def search_web(query: str, max_results: int = 3) -> str:
     """
     Recherche des informations sur internet pour trouver des actualités positives,

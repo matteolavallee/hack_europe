@@ -8,7 +8,9 @@ Responsibilities:
 from typing import Dict, Any
 from datetime import datetime
 import locale
+from app.tools import register_tool
 
+@register_tool
 def get_temporal_context() -> Dict[str, Any]:
     """
     Retourne la date, l'heure et le jour de la semaine actuels.
