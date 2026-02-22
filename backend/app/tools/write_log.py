@@ -14,7 +14,7 @@ from app.tools import register_tool
 @register_tool
 def write_health_log(mood: str, medication_taken: bool, notes: Optional[str] = "", category: str = "GENERAL") -> Dict[str, Any]:
     """
-    Sauvegarde l'humeur et l'état médical perçu du patient dans son fichier de suivi quotidien.
+    Save the patient's mood and perceived health status to their daily health log.
     """
     today = datetime.now().strftime("%Y-%m-%d")
 
