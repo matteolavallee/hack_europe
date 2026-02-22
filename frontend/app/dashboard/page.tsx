@@ -73,7 +73,7 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-5">
-      {/* En-tête */}
+      {/* Header */}
       <header>
         <h1 className="text-xl font-semibold text-foreground">
           {getGreeting()} — {PATIENT_NAME}&apos;s care
@@ -83,7 +83,7 @@ export default function DashboardHome() {
         </p>
       </header>
 
-      {/* Statut appareil */}
+      {/* Device status */}
       <section
         className="rounded-lg border border-border bg-card p-4"
         aria-label="Device status"
@@ -105,8 +105,8 @@ export default function DashboardHome() {
         </div>
       </section>
 
-      {/* Action rapide */}
-      <section aria-label="Action rapide">
+      {/* Quick action */}
+      <section aria-label="Quick action">
         <Link
           href="/dashboard/calendar"
           className="flex items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-foreground transition-colors hover:bg-muted"
@@ -118,8 +118,8 @@ export default function DashboardHome() {
         </Link>
       </section>
 
-      {/* Prochain événement */}
-      <section aria-label="Prochain événement">
+      {/* Next event */}
+      <section aria-label="Next event">
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Next event
@@ -143,7 +143,7 @@ export default function DashboardHome() {
                       {formatRelativeTime(nextEvent.scheduled_at)} — {nextEvent.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatEventDate(nextEvent.scheduled_at)} à {formatEventTime(nextEvent.scheduled_at)} · {label}
+                      {formatEventDate(nextEvent.scheduled_at)} at {formatEventTime(nextEvent.scheduled_at)} · {label}
                     </p>
                   </div>
                 </div>
@@ -169,8 +169,8 @@ export default function DashboardHome() {
         </div>
       </section>
 
-      {/* Résumé du jour */}
-      <section aria-label="Résumé de la journée">
+      {/* Daily summary */}
+      <section aria-label="Daily summary">
         <h2 className="mb-3 text-sm font-semibold text-foreground">
           Today&apos;s summary
         </h2>

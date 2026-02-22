@@ -173,14 +173,12 @@ function formatCurrentTime(selectedDate: string): string {
 function TimelineEventCard({
   event,
   isPast,
-  selectedDate,
   onTriggerNow,
   onDelete,
   isTriggering,
 }: {
   event: TimelineEvent
   isPast: boolean
-  selectedDate: string
   onTriggerNow?: (eventId: string) => void
   onDelete?: (eventId: string) => void
   isTriggering?: boolean
@@ -504,180 +502,178 @@ export default function CalendarPage() {
       {view === "calendar" ? (
         <SeniorCareCalendar className="min-h-[calc(100vh-6rem)]" />
       ) : (
-      <div className="mx-auto max-w-2xl px-4 pt-6 sm:px-6">
-        <header className="mb-5">
-          <p className="text-sm text-muted-foreground">
-            {formatLongDate(selectedDate)}
-          </p>
+        <div className="mx-auto max-w-2xl px-4 pt-6 sm:px-6">
+          <header className="mb-5">
+            <p className="text-sm text-muted-foreground">
+              {formatLongDate(selectedDate)}
+            </p>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Button
-              size="md"
-              variant="secondary"
-              className="w-full"
-              onClick={() => setVoiceModalOpen(true)}
-            >
-              <Mic className="h-4 w-4 shrink-0" aria-hidden />
-              Direct voice message
-            </Button>
-            <Button
-              size="md"
-              variant="primary"
-              className="w-full"
-              onClick={() => setReminderModalOpen(true)}
-            >
-              <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden />
-              Schedule a reminder
-            </Button>
-          </div>
-        </header>
-
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <span className="hidden sm:inline">Go to date:</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="h-9 rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-          <nav className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card p-2 sm:gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedDate((d) => addDays(d, -7))} className="shrink-0 gap-1" title="Previous week">
-              <ChevronLeft className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Week</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={goPrev} className="shrink-0 gap-1" title="Previous day">
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-            <div
-              className={cn(
-                "flex min-w-0 max-w-[120px] shrink flex-col items-center justify-center overflow-hidden rounded-lg px-4 py-3 text-center sm:max-w-[140px]",
-                isToday(selectedDate)
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground",
-              )}
-              aria-live="polite"
-              aria-label={`Viewing ${formatDayLabel(selectedDate)}`}
-              title={formatDayLabel(selectedDate)}
-            >
-              <span className="w-full truncate text-[10px] font-medium uppercase tracking-wider opacity-80">
-                Viewing
-              </span>
-              <span className="mt-0.5 w-full truncate text-sm font-semibold sm:text-base">
-                {formatDayLabel(selectedDate)}
-              </span>
-              {!isToday(selectedDate) && (
-                <button
-                  type="button"
-                  onClick={goToday}
-                  className="mt-2 shrink-0 text-xs font-medium underline hover:no-underline"
-                  aria-label="Go to today"
-                >
-                  Go to today
-                </button>
-              )}
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Button
+                size="md"
+                variant="secondary"
+                className="w-full"
+                onClick={() => setVoiceModalOpen(true)}
+              >
+                <Mic className="h-4 w-4 shrink-0" aria-hidden />
+                Direct voice message
+              </Button>
+              <Button
+                size="md"
+                variant="primary"
+                className="w-full"
+                onClick={() => setReminderModalOpen(true)}
+              >
+                <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Schedule a reminder
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={goNext} className="shrink-0 gap-1" title="Next day">
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedDate((d) => addDays(d, 7))} className="shrink-0 gap-1" title="Next week">
-              <span className="hidden sm:inline">Week</span> <ChevronRight className="h-4 w-4" aria-hidden />
-            </Button>
-          </nav>
-        </div>
+          </header>
 
-        {/* Feedback Send now */}
-        {sendFeedback === "success" && (
-          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-            <span className="font-medium">Rappel envoyé au device.</span>{" "}
-            <a href="/device" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
-              Ouvrez la vue Device ↗
-            </a>{" "}
-            pour l&apos;écouter.
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <span className="hidden sm:inline">Go to date:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="h-9 rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+            <nav className="flex items-center justify-center gap-1 rounded-lg border border-border bg-card p-2 sm:gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedDate((d) => addDays(d, -7))} className="shrink-0 gap-1" title="Previous week">
+                <ChevronLeft className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Week</span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={goPrev} className="shrink-0 gap-1" title="Previous day">
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              </Button>
+              <div
+                className={cn(
+                  "flex min-w-0 max-w-[120px] shrink flex-col items-center justify-center overflow-hidden rounded-lg px-4 py-3 text-center sm:max-w-[140px]",
+                  isToday(selectedDate)
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground",
+                )}
+                aria-live="polite"
+                aria-label={`Viewing ${formatDayLabel(selectedDate)}`}
+                title={formatDayLabel(selectedDate)}
+              >
+                <span className="w-full truncate text-[10px] font-medium uppercase tracking-wider opacity-80">
+                  Viewing
+                </span>
+                <span className="mt-0.5 w-full truncate text-sm font-semibold sm:text-base">
+                  {formatDayLabel(selectedDate)}
+                </span>
+                {!isToday(selectedDate) && (
+                  <button
+                    type="button"
+                    onClick={goToday}
+                    className="mt-2 shrink-0 text-xs font-medium underline hover:no-underline"
+                    aria-label="Go to today"
+                  >
+                    Go to today
+                  </button>
+                )}
+              </div>
+              <Button variant="ghost" size="sm" onClick={goNext} className="shrink-0 gap-1" title="Next day">
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedDate((d) => addDays(d, 7))} className="shrink-0 gap-1" title="Next week">
+                <span className="hidden sm:inline">Week</span> <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+            </nav>
           </div>
-        )}
-        {sendFeedback === "error" && (
-          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            Échec de l&apos;envoi. Vérifiez que le backend tourne sur {process.env.NEXT_PUBLIC_API_URL ?? "localhost:8000"}.
-          </div>
-        )}
 
-        {/* Timeline */}
-        <div className="relative">
-          <div className="absolute left-4 top-0 bottom-0 w-px bg-border sm:left-5" aria-hidden />
-
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <svg className="h-10 w-10 animate-spin text-primary" fill="none" viewBox="0 0 24 24" aria-hidden>
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
+          {/* Feedback Send now */}
+          {sendFeedback === "success" && (
+            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+              <span className="font-medium">Rappel envoyé au device.</span>{" "}
+              <a href="/device" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+                Ouvrez la vue Device ↗
+              </a>{" "}
+              pour l&apos;écouter.
             </div>
-          ) : (
-          <div className="space-y-6">
-            {/* Past events */}
-            {pastEvents.map((event) => (
-              <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
-                <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-muted-foreground sm:left-1" aria-hidden />
-                <div className="flex-1 pt-0">
-                  <TimelineEventCard
-                    event={event}
-                    isPast
-                    selectedDate={selectedDate}
-                    onTriggerNow={handleTriggerNow}
-                    onDelete={handleDelete}
-                    isTriggering={triggeringId === event.id}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Separator: current time */}
-            {showNowSeparator && (
-              <div className="relative flex gap-3 pl-2 sm:pl-3">
-                <div className="absolute left-0 top-4 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-primary bg-card" />
-                <div className="flex-1 pt-0">
-                  <div className="rounded-lg border border-border bg-muted px-3 py-2">
-                    <span className="text-xs font-medium text-foreground">
-                      Current time: {nowTime}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Upcoming events */}
-            {futureEvents.map((event) => (
-              <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
-                <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-primary sm:left-1" aria-hidden />
-                <div className="flex-1 pt-0">
-                  <TimelineEventCard
-                    event={event}
-                    isPast={false}
-                    selectedDate={selectedDate}
-                    onTriggerNow={handleTriggerNow}
-                    onDelete={handleDelete}
-                    isTriggering={triggeringId === event.id}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {pastEvents.length === 0 && futureEvents.length === 0 && (
-              <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
-                <CalendarPlus className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden />
-                <p className="mt-3 text-sm font-medium text-foreground">No events on this day</p>
-                <p className="mt-1 text-xs text-muted-foreground">Schedule a reminder to keep your loved one reassured.</p>
-                <Button size="md" className="mt-4" onClick={() => setReminderModalOpen(true)}>
-                  Schedule a reminder
-                </Button>
-              </div>
-            )}
-          </div>
           )}
+          {sendFeedback === "error" && (
+            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              Échec de l&apos;envoi. Vérifiez que le backend tourne sur {process.env.NEXT_PUBLIC_API_URL ?? "localhost:8000"}.
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="relative">
+            <div className="absolute left-4 top-0 bottom-0 w-px bg-border sm:left-5" aria-hidden />
+
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <svg className="h-10 w-10 animate-spin text-primary" fill="none" viewBox="0 0 24 24" aria-hidden>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Past events */}
+                {pastEvents.map((event) => (
+                  <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
+                    <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-muted-foreground sm:left-1" aria-hidden />
+                    <div className="flex-1 pt-0">
+                      <TimelineEventCard
+                        event={event}
+                        isPast
+                        onTriggerNow={handleTriggerNow}
+                        onDelete={handleDelete}
+                        isTriggering={triggeringId === event.id}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Separator: current time */}
+                {showNowSeparator && (
+                  <div className="relative flex gap-3 pl-2 sm:pl-3">
+                    <div className="absolute left-0 top-4 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-primary bg-card" />
+                    <div className="flex-1 pt-0">
+                      <div className="rounded-lg border border-border bg-muted px-3 py-2">
+                        <span className="text-xs font-medium text-foreground">
+                          Current time: {nowTime}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upcoming events */}
+                {futureEvents.map((event) => (
+                  <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
+                    <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-primary sm:left-1" aria-hidden />
+                    <div className="flex-1 pt-0">
+                      <TimelineEventCard
+                        event={event}
+                        isPast={false}
+                        onTriggerNow={handleTriggerNow}
+                        onDelete={handleDelete}
+                        isTriggering={triggeringId === event.id}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {pastEvents.length === 0 && futureEvents.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
+                    <CalendarPlus className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden />
+                    <p className="mt-3 text-sm font-medium text-foreground">No events on this day</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Schedule a reminder to keep your loved one reassured.</p>
+                    <Button size="md" className="mt-4" onClick={() => setReminderModalOpen(true)}>
+                      Schedule a reminder
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Modal: Direct voice message */}
@@ -856,16 +852,16 @@ export default function CalendarPage() {
             {repeatRule === "weekly" && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-600">Every</span>
-                <select
-                  value={repeatInterval}
-                  onChange={(e) => setRepeatInterval(Number(e.target.value))}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  {[1, 2, 3, 4].map((n) => (
-                    <option key={n} value={n}>{n} {n === 1 ? "week" : "weeks"}</option>
-                  ))}
-                </select>
+                  <span className="text-sm text-gray-600">Every</span>
+                  <select
+                    value={repeatInterval}
+                    onChange={(e) => setRepeatInterval(Number(e.target.value))}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    {[1, 2, 3, 4].map((n) => (
+                      <option key={n} value={n}>{n} {n === 1 ? "week" : "weeks"}</option>
+                    ))}
+                  </select>
                 </div>
                 <Select
                   label="On weekday"
@@ -879,16 +875,16 @@ export default function CalendarPage() {
             {repeatRule === "monthly" && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-600">Every</span>
-                <select
-                  value={repeatInterval}
-                  onChange={(e) => setRepeatInterval(Number(e.target.value))}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  {[1, 2, 3].map((n) => (
-                    <option key={n} value={n}>{n} {n === 1 ? "month" : "months"}</option>
-                  ))}
-                </select>
+                  <span className="text-sm text-gray-600">Every</span>
+                  <select
+                    value={repeatInterval}
+                    onChange={(e) => setRepeatInterval(Number(e.target.value))}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    {[1, 2, 3].map((n) => (
+                      <option key={n} value={n}>{n} {n === 1 ? "month" : "months"}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">On</span>

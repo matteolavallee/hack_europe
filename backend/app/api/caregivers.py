@@ -18,7 +18,7 @@ router = APIRouter(prefix="/caregivers", tags=["caregivers"])
 @router.get("", response_model=List[Caregiver])
 def get_caregivers_list():
     """
-    Récupère les informations des aidants (nom, ID Telegram, numéro de téléphone).
+    Retrieves caregivers information (name, Telegram ID, phone number).
     """
     caregivers_data = json_store_service.get_caregivers()
     return [Caregiver(**c) for c in caregivers_data]
@@ -38,7 +38,7 @@ def get_care_receiver(receiver_id: str):
 
 @router.post("/receivers", response_model=CareReceiver)
 def create_care_receiver(payload: CareReceiverCreate):
-    new_id = f"cr-{uuid.uuid4().hex[:8]}"
+    new_id = f"cr-{str(uuid.uuid4().hex)[:8]}"
     new_receiver = CareReceiver(
         id=new_id,
         caregiver_id=payload.caregiver_id,

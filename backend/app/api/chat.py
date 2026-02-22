@@ -27,29 +27,30 @@ from app.core.config import BASE_DIR
 @router.post("/message", response_model=ChatResponse)
 async def send_chat_message(payload: ChatMessage):
     """
-    Reçoit un message (texte ou audio) du patient.
+    Receives a message (text or audio) from the patient.
     Process the message through the Agent service (LLM loop) and return.
     """
     SESSION_ID = "default_patient_session"
     
-    # L'agent calcule la réponse (avec outillage dynamique si nécessaire)
+    # The agent calculates the response (with dynamic tooling if necessary)
     final_response = agent_service.process_user_message(SESSION_ID, payload.message)
     
     audio_url = None
     try:
-        # Generer l'audio via ElevenLabs
+        # Generate audio via ElevenLabs
         audio_bytes = await generate_tts_audio(final_response)
         
-        # Sauvegarder localement
-        filename = f"resp_{uuid.uuid4().hex[:8]}.mp3"
+        # Save locally
+        filename = f"resp_{str(uuid.uuid4().hex)[:8]}.mp3"
         filepath = BASE_DIR / "app" / "static" / "audio" / filename
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         
         with open(filepath, "wb") as f:
             f.write(audio_bytes)
             
         audio_url = f"/audio/{filename}"
     except Exception as e:
-        print(f"Erreur lors de la generation TTS interne : {e}")
+        print(f"Error during internal TTS generation: {e}")
 
     return ChatResponse(
         response=final_response,
@@ -59,9 +60,9 @@ async def send_chat_message(payload: ChatMessage):
 @router.get("/history", response_model=List[HistoryItem])
 def get_chat_history():
     """
-    Retourne l'historique de la conversation actuelle pour le debug depuis le cache de l'agent.
+    Returns the history of the current conversation for debugging from the agent cache.
     """
-    # En contexte multi-users, l'ID serait récupéré depuis l'auth
+    # In a multi-user context, the ID would be retrieved from auth
     SESSION_ID = "default_patient_session"
     
     history = agent_service.get_session_history(SESSION_ID)
@@ -80,7 +81,7 @@ def get_audio_contents(care_receiver_id: Optional[str] = Query(None)):
 @router.post("/audio", response_model=AudioContent)
 def create_audio_content(payload: CreateAudioContentPayload):
     new_item = AudioContent(
-        id=f"ac-{uuid.uuid4().hex[:8]}",
+        id=f"ac-{str(uuid.uuid4().hex)[:8]}",
         care_receiver_id=payload.care_receiver_id,
         title=payload.title,
         url=payload.url,
@@ -104,7 +105,7 @@ def send_audio_now(item_id: str):
 
         actions = json_store_service.get_device_actions()
         actions.append({
-            "id": f"act-{uuid.uuid4().hex[:8]}",
+            "id": f"act-{str(uuid.uuid4().hex)[:8]}",
             "kind": "propose_audio",
             "text_to_speak": f"I have an audio message for you: {item['title']}. Do you want to listen to it?",
             "audio_url": item["url"],
@@ -126,7 +127,7 @@ def schedule_audio(item_id: str, payload: ScheduleAudioPayload):
 
         items = json_store_service.get_calendar_items()
         items.append({
-            "id": f"ci-{uuid.uuid4().hex[:8]}",
+            "id": f"ci-{str(uuid.uuid4().hex)[:8]}",
             "care_receiver_id": item["care_receiver_id"],
             "type": "audio_push",
             "title": f"Listen to {item['title']}",
@@ -175,13 +176,13 @@ def trigger_suggestion(payload: DemoSuggestionPayload):
         actions = json_store_service.get_device_actions()
         if payload.kind == "exercise":
             actions.append({
-                "id": f"act-{uuid.uuid4().hex[:8]}",
+                "id": f"act-{str(uuid.uuid4().hex)[:8]}",
                 "kind": "propose_exercise",
                 "text_to_speak": "I have a quick brain exercise for you. Would you like to try it now?"
             })
         elif payload.kind == "message":
             actions.append({
-                "id": f"act-{uuid.uuid4().hex[:8]}",
+                "id": f"act-{str(uuid.uuid4().hex)[:8]}",
                 "kind": "propose_audio",
                 "text_to_speak": "I found a nice family message for you to listen to. Shall I play it?"
             })
@@ -191,7 +192,7 @@ def trigger_suggestion(payload: DemoSuggestionPayload):
 @router.get("/device/next-actions", response_model=List[DeviceAction])
 def get_next_actions(care_receiver_id: Optional[str] = Query(None)):
     actions = json_store_service.get_device_actions()
-    # speak_reminder en tête de file pour qu'ils soient traités immédiatement
+    # speak_reminder at the front of the queue so they are processed immediately
     actions = sorted(actions, key=lambda a: 0 if a.get("kind") == "speak_reminder" else 1)
     return [DeviceAction(**a) for a in actions]
 
@@ -204,7 +205,7 @@ def submit_device_response(payload: DeviceResponsePayload):
 
         events = json_store_service.get_events()
         events.append({
-            "id": f"ev-{uuid.uuid4().hex[:8]}",
+            "id": f"ev-{str(uuid.uuid4().hex)[:8]}",
             "care_receiver_id": "default", # Should fetch proper ID
             "type": "reminder_confirmed" if payload.response == "yes" else "reminder_postponed",
             "payload": {"response": payload.response, "action_id": payload.action_id},
@@ -219,7 +220,7 @@ def submit_help_request(payload: HelpRequestPayload):
     with json_store_service.lock:
         events = json_store_service.get_events()
         events.append({
-            "id": f"ev-{uuid.uuid4().hex[:8]}",
+            "id": f"ev-{str(uuid.uuid4().hex)[:8]}",
             "care_receiver_id": "default", # Should fetch proper ID
             "type": "help_requested",
             "payload": {"type": payload.type, "message": payload.message},

@@ -59,7 +59,7 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
     const recognition = new SrCtor()
     recognition.lang = "en-US"
     recognition.interimResults = false
-    recognition.maxAlternatives = 3   // plus de candidats = meilleure détection
+    recognition.maxAlternatives = 3   // more candidates = better detection
     recognition.continuous = false
 
     let settled = false
@@ -77,7 +77,7 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
-      // Essayer tous les résultats disponibles (meilleur intent en priorité)
+      // Try all available results (best intent priority)
       let best: SpeechResult | null = null
       for (let r = 0; r < event.results.length; r++) {
         for (let a = 0; a < event.results[r].length; a++) {
@@ -98,7 +98,7 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
       settle(() => reject(new Error(event.error ?? "recognition-error")))
     }
 
-    // onend SANS résultat = silence ou browser a stoppé → rejeter pour réessayer
+    // onend WITHOUT result = silence or browser stopped → reject to retry
     recognition.onend = () => {
       settle(() => reject(new Error("no-speech")))
     }

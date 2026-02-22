@@ -77,7 +77,7 @@ def process_user_message(session_id: str, message: str) -> str:
     try:
         chat = _get_or_create_chat(session_id)
     except RuntimeError as e:
-        return f"Erreur de configuration: {str(e)}"
+        return f"Configuration error: {str(e)}"
     # --- ENVIRONMENTAL CONTEXT INJECTION (Invisible to the user) ---
     from datetime import datetime
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -109,13 +109,13 @@ def process_user_message(session_id: str, message: str) -> str:
     augmented_message = env_context + message
     # ---------------------------------------------------------------------------
     
-    # Historisation du prompt de l'utilisateur dans le JSON métier (sans le blabla d'environnement)
+    # Log the user's prompt in the business JSON (excluding environment context)
     append_to_conversation(session_id, "user", message)
 
     try:
         response = chat.send_message(augmented_message)
     except Exception as e:
-        return f"Erreur de l'agent LLM: {str(e)}"
+        return f"LLM Agent error: {str(e)}"
 
     # Iteratively resolve tool calls
     while response.function_calls:
@@ -123,7 +123,10 @@ def process_user_message(session_id: str, message: str) -> str:
         for fc in response.function_calls:
             name = fc.name
             args = dict(fc.args)
-            print(f"[AGENT TOOL EXECUTION] Tool: {name}, Args: {args}")
+            
+            print(f"\n\033[95m🤖 [AGENT REASONING]\033[0m Agent decided to use a tool:")
+            print(f"\033[94m🛠️  [TOOL EXECUTION]\033[0m Name: {name}")
+            print(f"    Arguments: {args}")
 
             if name in TOOL_MAP:
                 try:
@@ -133,20 +136,23 @@ def process_user_message(session_id: str, message: str) -> str:
             else:
                 result = {"error": f"Tool {name} not found"}
 
-            print(f"[AGENT TOOL RESULT] Result: {result}")
+            print(f"\033[92m✅ [TOOL RESULT]\033[0m {result}")
 
             function_responses.append(
                 types.Part.from_function_response(name=name, response=result)
             )
 
+        print("\n\033[93m⏳ [AGENT THINKING]\033[0m Sending tool result to Gemini for further reasoning...")
         response = chat.send_message(function_responses)
 
     final_text = response.text
     if not final_text:
         final_text = ""
+        
+    print(f"\n\033[96m🗣️  [FINAL RESPONSE]\033[0m {final_text}\n")
     # Strip markdown so TTS reads clean natural speech
     final_text = _strip_markdown(final_text)
-    # Historisation de la réponse finale de l'assistant dans le JSON métier
+    # Log the final response of the assistant in the business JSON
     append_to_conversation(session_id, "assistant", final_text)
 
     return final_text
@@ -162,10 +168,10 @@ def get_session_history(session_id: str) -> list[HistoryItem]:
         # Ignore system messages / tool execution overhead in simple output
         role = "assistant" if m.role == "model" else "user"
 
-        content = ""
+        content: str = ""
         for p in m.parts:
             if hasattr(p, "text") and p.text:
-                content += p.text
+                content += str(p.text)
 
         if content:
             history.append(HistoryItem(role=role, content=content))

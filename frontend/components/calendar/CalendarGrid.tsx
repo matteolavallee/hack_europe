@@ -5,7 +5,6 @@ import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import type { CalendarEvent, ViewMode } from "@/lib/calendar-types"
 import { CATEGORY_CONFIG } from "@/lib/calendar-types"
-import { EventCard } from "./EventCard"
 
 interface CalendarGridProps {
   viewMode: ViewMode
@@ -325,7 +324,7 @@ function DayView({
                 </div>
               )}
 
-              {/* Événements */}
+              {/* Events */}
               <div className="flex flex-1 flex-col gap-1.5">
                 {hourEvents.map((ev) => {
                   const config = CATEGORY_CONFIG[ev.category]

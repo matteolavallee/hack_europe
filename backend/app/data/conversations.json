@@ -50,6 +50,14 @@
             {
                 "role": "assistant",
                 "content": "Bien sûr, je peux regarder pour vous.\n\nAujourd'hui, il est prévu une sieste à 13h00, et un café à 8h00. Il y a aussi vos pilules bleues du matin prévues demain à 6h30."
+            },
+            {
+                "role": "user",
+                "content": "hello"
+            },
+            {
+                "role": "user",
+                "content": "hello"
             }
         ]
     },
@@ -108,6 +116,18 @@
             {
                 "role": "assistant",
                 "content": "Oh, je suis désolé d'apprendre que vous avez mal à la tête. J'ai bien noté cette information et j'ai programmé un rappel pour votre doliprane à 18h. Je vous le rappellerai sans faute.\n"
+            },
+            {
+                "role": "user",
+                "content": "J'ai mal à la tête depuis ce matin et je dois prendre mon doliprane à 18h."
+            },
+            {
+                "role": "user",
+                "content": "J'ai mal à la tête depuis ce matin et je dois prendre mon doliprane à 18h."
+            },
+            {
+                "role": "user",
+                "content": "J'ai mal à la tête depuis ce matin et je dois prendre mon doliprane à 18h."
             }
         ]
     }

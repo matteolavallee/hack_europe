@@ -51,11 +51,64 @@ Le backend FastAPI doit être déployé séparément. Options courantes :
 
 - **Railway** : `railway up` depuis le dossier `backend/`
 - **Render** : créer un Web Service, root directory = `backend`, command = `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+# Deployment on Vercel
 
-## Comportement identique en prod
+## Project Structure
 
-Le frontend déployé sur Vercel offre les mêmes fonctionnalités qu'en local :
+- **Frontend** (Next.js): `frontend/` — deployed on Vercel
+- **Backend** (FastAPI): `backend/` — to be deployed separately (Railway, Render, etc.)
 
-- Dashboard, calendrier, timeline, device, kiosk
-- Mode mock (`NEXT_PUBLIC_USE_MOCK=true`) si backend non disponible
-- Bandeau de configuration si `NEXT_PUBLIC_API_URL` pointe vers localhost en production
+## Pre-deployment Checklist
+
+- [ ] Build passes: `cd frontend && npm run build`
+- [ ] Backend is deployed and accessible via HTTPS
+- [ ] Environment variables are configured in Vercel (see below)
+
+## Deploying the Frontend on Vercel
+
+### 1. Connection
+
+1. Go to [vercel.com](https://vercel.com) and connect your GitHub/GitLab/Bitbucket repo
+2. Import the project
+3. Vercel automatically detects the configuration via `vercel.json` (rootDirectory: frontend)
+
+### 2. Environment Variables
+
+In **Vercel > Project Settings > Environment Variables**, add:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_API_URL` | FastAPI backend URL (e.g. `https://xxx.railway.app`) | Yes |
+| `NEXT_PUBLIC_BACKEND_URL` | Alias of `NEXT_PUBLIC_API_URL` (priority if both are defined) | No |
+| `NEXT_PUBLIC_USE_MOCK` | `false` in production | Yes |
+| `NEXT_PUBLIC_CARE_RECEIVER_ID` | Beneficiary ID (e.g. `cr-0000-0001`) | No (default: cr-0000-0001) |
+| `NEXT_PUBLIC_ELEVENLABS_API_KEY` | ElevenLabs Key (for TTS on the Device page) | If Device page is used |
+| `NEXT_PUBLIC_ELEVENLABS_VOICE_ID` | Voice ID (default: 21m00Tcm4TlvDq8ikWAM) | No |
+| `NEXT_PUBLIC_ELEVENLABS_MODEL_ID` | TTS Model (default: eleven_turbo_v2) | No |
+
+### 3. Backend CORS
+
+On your backend (Railway, Render…), configure `ALLOWED_ORIGINS` to include your Vercel domain:
+```
+ALLOWED_ORIGINS=https://your-project.vercel.app,https://your-project-*.vercel.app
+```
+
+### 4. Deployment
+
+- **Production**: A push to `main` triggers a deployment
+- **Preview**: Every PR creates a preview URL
+
+## Deploying the Backend (Independent)
+
+The FastAPI backend must be deployed separately. Common options:
+
+- **Railway**: `railway up` from the `backend/` folder
+- **Render**: Create a Web Service, root directory = `backend`, command = `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+## Identical Behavior in Production
+
+The frontend deployed on Vercel offers the same features as locally:
+
+- Dashboard, calendar, timeline, device, kiosk
+- Mock mode (`NEXT_PUBLIC_USE_MOCK=true`) if the backend is unavailable
+- Configuration banner if `NEXT_PUBLIC_API_URL` points to localhost in production

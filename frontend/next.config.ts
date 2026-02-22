@@ -5,13 +5,13 @@ import path from "node:path";
 
 const isLocal = process.env.VERCEL !== "1";
 
-// En local, charger .env du répertoire parent (monorepo). Sur Vercel, ignoré.
+// Locally, load .env from the parent directory (monorepo). On Vercel, this is ignored.
 if (isLocal) {
   try {
     const projectDir = process.cwd();
     loadEnvConfig(path.resolve(projectDir, ".."));
   } catch {
-    // Ignore si le fichier parent n'existe pas
+    // Ignore if the parent file doesn't exist
   }
 }
 

@@ -3,9 +3,9 @@
 import { KioskShell } from "@/components/device/KioskShell"
 
 /**
- * Vue Kiosk — appareil du bénéficiaire.
- * Poll les next-actions (rappels, musique, exercices) et les joue.
- * Ouverture: /device/kiosk (ou via "Device view" dans la sidebar).
+ * Kiosk View — care receiver's device.
+ * Polls next-actions (reminders, music, exercises) and plays them.
+ * Open at: /device/kiosk (or via "Device view" in the sidebar).
  */
 export default function KioskPage() {
   return <KioskShell />

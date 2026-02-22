@@ -151,21 +151,21 @@ export function EventSidebar({
             >
               No events for this day.
               <br />
-              <span className="text-xs">Click "Add" to schedule one.</span>
+              <span className="text-xs">Click &quot;Add&quot; to schedule one.</span>
             </motion.p>
           ) : (
             <div className="space-y-2">
               {sendFeedback === "success" && (
                 <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
-                  Envoyé au device.{" "}
+                  Sent to device.{" "}
                   <a href="/device" target="_blank" rel="noopener noreferrer" className="underline">
-                    Ouvrir Device view ↗
+                    Open Device view ↗
                   </a>
                 </p>
               )}
               {sendFeedback === "error" && (
                 <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                  Échec de l&apos;envoi. Vérifiez le backend.
+                  Failed to send. Check the backend.
                 </p>
               )}
               {sortedEvents.map((event) => (

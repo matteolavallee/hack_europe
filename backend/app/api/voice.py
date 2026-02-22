@@ -133,8 +133,8 @@ async def transcribe_audio(audio: UploadFile = File(...)) -> dict:
 @router.get("/tts")
 async def text_to_speech_get(text: str = "") -> Response:
     """
-    GET /api/tts?text=... — synthèse vocale via ElevenLabs.
-    Utilisé par le KioskShell (balise <audio src="...">) pour lire les rappels.
+    GET /api/tts?text=... — text-to-speech via ElevenLabs.
+    Used by KioskShell (<audio src="..."> tag) to play reminders.
     """
     if not text.strip():
         raise HTTPException(status_code=422, detail="'text' query param must not be empty.")
@@ -142,7 +142,7 @@ async def text_to_speech_get(text: str = "") -> Response:
 
 
 async def _do_tts(text: str, voice_id: Optional[str], model_id: Optional[str]) -> Response:
-    """Génère l'audio TTS via ElevenLabs."""
+    """Generates TTS audio via ElevenLabs."""
     if not _ELEVENLABS_API_KEY:
         raise HTTPException(
             status_code=500,
@@ -192,8 +192,8 @@ async def text_to_speech(req: TtsRequest) -> Response:
 @router.get("/audio/proxy")
 async def proxy_audio(url: str) -> Response:
     """
-    Proxy un fichier audio externe (résout les problèmes CORS côté browser).
-    Supporte les liens Google Drive share avec gestion de la page de confirmation.
+    Proxies an external audio file (resolves CORS issues on the browser side).
+    Supports Google Drive share links with handling of the confirmation page.
     GET /api/audio/proxy?url=https://...
     """
     import re as _re
@@ -208,12 +208,12 @@ async def proxy_audio(url: str) -> Response:
         )
     }
 
-    # Dropbox : forcer le téléchargement direct (dl=1)
+    # Dropbox : force direct download (dl=1)
     if "dropbox.com" in url:
         url = _re.sub(r"[?&]dl=\d", "", url)
         url += ("&" if "?" in url else "?") + "dl=1"
 
-    # Convertir les liens Google Drive share en lien de téléchargement direct
+    # Convert Google Drive share links to a direct download link
     m = _re.search(r"/d/([a-zA-Z0-9_-]+)", url)
     if m and "drive.google.com" in url:
         file_id = m.group(1)
@@ -229,23 +229,23 @@ async def proxy_audio(url: str) -> Response:
 
             content_type_raw = resp.headers.get("content-type", "")
 
-            # Google Drive renvoie une page HTML de confirmation pour les gros fichiers
+            # Google Drive returns an HTML confirmation page for large files
             if "text/html" in content_type_raw:
                 html = resp.content.decode("utf-8", errors="ignore")
 
-                # Chercher le lien "Download anyway" ou le form action
+                # Look for the "Download anyway" link or the form action
                 confirm_match = _re.search(
                     r'href="(/uc\?export=download[^"]+confirm=[^"&]+[^"]*)"', html
                 )
                 if not confirm_match:
-                    # Format alternatif dans certaines versions
+                    # Alternative format in some versions
                     confirm_match = _re.search(
                         r'"downloadUrl":"(https://[^"]+)"', html
                     )
                     if confirm_match:
                         confirm_url = confirm_match.group(1).replace(r"\u003d", "=").replace(r"\u0026", "&")
                     else:
-                        # Essai avec le cookie de confirmation présent dans les cookies
+                        # Try with the confirmation cookie present in the cookies
                         cookie_header = resp.headers.get("set-cookie", "")
                         token_match = _re.search(r"download_warning_[^=]+=([^;]+)", cookie_header)
                         if token_match:
@@ -256,7 +256,7 @@ async def proxy_audio(url: str) -> Response:
                         else:
                             raise HTTPException(
                                 status_code=422,
-                                detail="Google Drive: impossible d'extraire le lien de confirmation. Utilisez une URL directe."
+                                detail="Google Drive: unable to extract confirmation link. Use a direct URL."
                             )
                 else:
                     confirm_url = "https://drive.google.com" + confirm_match.group(1).replace("&amp;", "&")
@@ -270,11 +270,11 @@ async def proxy_audio(url: str) -> Response:
         raise HTTPException(status_code=502, detail=f"Remote returned {resp.status_code}")
 
     content_type = resp.headers.get("content-type", "audio/mpeg").split(";")[0]
-    # Si toujours du HTML, c'est un échec
+    # If still HTML, it's a failure
     if "text/html" in content_type:
         raise HTTPException(
             status_code=422,
-            detail="Google Drive a retourné du HTML au lieu du fichier audio. Le fichier doit être partagé en accès public."
+            detail="Google Drive returned HTML instead of the audio file. The file must be shared publicly."
         )
 
     return Response(

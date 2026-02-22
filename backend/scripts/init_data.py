@@ -19,19 +19,19 @@ from google.genai import types
 
 def run_onboarding():
     print("=" * 60)
-    print("      INITIALISATION INTERACTIVE - DOSSIER PATIENT      ")
+    print("      INTERACTIVE INITIALIZATION - PATIENT FILE      ")
     print("=" * 60)
-    print("L'assistant numérique va maintenant démarrer la conversation.")
-    print("Tapez 'quit' pour quitter à tout moment.\n")
+    print("The digital assistant will now start the conversation.")
+    print("Type 'quit' to exit at any time.\n")
 
     try:
         chat = create_onboarding_chat()
     except Exception as e:
-        print(f"Erreur d'initialisation de l'IA: {e}")
+        print(f"AI initialization error: {e}")
         return
 
     # Trigger initial greeting
-    message = "Bonjour Docteur, je suis prêt pour notre entretien de premier contact."
+    message = "Hello Doctor, I am ready for our first contact interview."
     
     while True:
         try:
@@ -43,7 +43,7 @@ def run_onboarding():
                 for fc in response.function_calls:
                     name = fc.name
                     args = dict(fc.args)
-                    print(f"\n[!] ACTION EN ARRIÈRE-PLAN: Enregistrement des données... ({args})")
+                    print(f"\n[!] BACKGROUND ACTION: Saving data... ({args})")
                     
                     if name == "update_patient_context":
                         try:
@@ -64,13 +64,13 @@ def run_onboarding():
             print(f"\nDr. AI: {response.text}")
 
         except Exception as e:
-            print(f"Une erreur est survenue lors de la conversation: {e}")
+            print(f"An error occurred during the conversation: {e}")
             break
 
         # Get user input
-        message = input("\nVous: ")
+        message = input("\nYou: ")
         if message.lower().strip() in ["quit", "exit", "quitter"]:
-            print("Entretien terminé.")
+            print("Interview finished.")
             break
 
 if __name__ == "__main__":

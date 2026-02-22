@@ -108,7 +108,7 @@ export function EventCard({ event, onSelect, onTriggerNow, onDelete, isTriggerin
         )}
       </div>
       {event.isDone && (
-        <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary" aria-label="Effectué">
+        <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary" aria-label="Done">
           <Check className="h-3.5 w-3.5" aria-hidden />
         </span>
       )}

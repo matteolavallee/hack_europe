@@ -11,7 +11,7 @@ const BACKEND_URL =
   "http://localhost:8000"
 
 // ElevenLabs called directly from the browser (avoids datacenter IP blocks on free tier)
-const ELEVENLABS_API_KEY  = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY  ?? ""
+const ELEVENLABS_API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY ?? ""
 const ELEVENLABS_VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM"
 const ELEVENLABS_MODEL_ID = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL_ID ?? "eleven_turbo_v2"
 
@@ -57,8 +57,8 @@ interface DeviceAction {
 }
 
 /**
- * Passe toutes les URLs audio par le proxy backend pour éviter les erreurs CORS.
- * Le proxy gère aussi la conversion des liens Google Drive.
+ * Pass all audio URLs through the backend proxy to avoid CORS errors.
+ * The proxy also handles converting Google Drive links.
  */
 function toProxiedUrl(url: string): string {
   return `${BACKEND_URL}/api/audio/proxy?url=${encodeURIComponent(url)}`
@@ -106,7 +106,7 @@ async function ackAction(actionId: string): Promise<void> {
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
   if (!ELEVENLABS_API_KEY) {
     throw new Error(
-      "Voice non configurée. Ajoute NEXT_PUBLIC_ELEVENLABS_API_KEY dans les variables d'environnement Vercel (Settings > Environment Variables)."
+      "Voice not configured. Add NEXT_PUBLIC_ELEVENLABS_API_KEY in Vercel environment variables (Settings > Environment Variables)."
     )
   }
 
@@ -143,14 +143,14 @@ async function speakText(text: string, onStart?: () => void, onEnd?: () => void)
 // ─── Design tokens per state ──────────────────────────────────────────────────
 
 const TOKEN = {
-  idle:         { orb: "#00a0dc", glow: "rgba(0,160,220,0.45)",  ring: "rgba(0,160,220,0.2)",   label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
-  recording:    { orb: "#16a34a", glow: "rgba(22,163,74,0.45)",  ring: "rgba(22,163,74,0.2)",   label: "Listening…",              sub: "Tap again to stop" },
-  transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)",   ring: "rgba(217,119,6,0.18)",  label: "Transcribing…",           sub: "One moment…" },
-  thinking:     { orb: "#7c3aed", glow: "rgba(124,58,237,0.4)",  ring: "rgba(124,58,237,0.18)", label: "Thinking…",               sub: "One moment…" },
-  speaking:     { orb: "#0077b3", glow: "rgba(0,119,179,0.45)",  ring: "rgba(0,119,179,0.2)",   label: "Speaking…",               sub: "" },
-  waiting:      { orb: "#f59e0b", glow: "rgba(245,158,11,0.45)", ring: "rgba(245,158,11,0.2)",  label: "Your answer?",            sub: "Yes or No" },
-  playing:      { orb: "#059669", glow: "rgba(5,150,105,0.45)",  ring: "rgba(5,150,105,0.2)",   label: "Playing…",                sub: "Enjoy the music!" },
-  error:        { orb: "#dc2626", glow: "rgba(220,38,38,0.35)",  ring: "rgba(220,38,38,0.15)",  label: "Tap to try again",        sub: "" },
+  idle: { orb: "#00a0dc", glow: "rgba(0,160,220,0.45)", ring: "rgba(0,160,220,0.2)", label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
+  recording: { orb: "#16a34a", glow: "rgba(22,163,74,0.45)", ring: "rgba(22,163,74,0.2)", label: "Listening…", sub: "Tap again to stop" },
+  transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)", ring: "rgba(217,119,6,0.18)", label: "Transcribing…", sub: "One moment…" },
+  thinking: { orb: "#7c3aed", glow: "rgba(124,58,237,0.4)", ring: "rgba(124,58,237,0.18)", label: "Thinking…", sub: "One moment…" },
+  speaking: { orb: "#0077b3", glow: "rgba(0,119,179,0.45)", ring: "rgba(0,119,179,0.2)", label: "Speaking…", sub: "" },
+  waiting: { orb: "#f59e0b", glow: "rgba(245,158,11,0.45)", ring: "rgba(245,158,11,0.2)", label: "Your answer?", sub: "Yes or No" },
+  playing: { orb: "#059669", glow: "rgba(5,150,105,0.45)", ring: "rgba(5,150,105,0.2)", label: "Playing…", sub: "Enjoy the music!" },
+  error: { orb: "#dc2626", glow: "rgba(220,38,38,0.35)", ring: "rgba(220,38,38,0.15)", label: "Tap to try again", sub: "" },
 } satisfies Record<State, { orb: string; glow: string; ring: string; label: string; sub: string }>
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -189,29 +189,29 @@ function Bars({ n, heights, delay, dur }: { n: number; heights: number[]; delay:
 
 function OrbIcon({ state }: { state: State }) {
   if (state === "recording") return <Bars n={5} heights={[36, 60, 48, 60, 36]} delay={0} dur="0.6s" />
-  if (state === "speaking")  return <Bars n={5} heights={[44, 72, 56, 72, 44]} delay={0} dur="0.65s" />
-  if (state === "playing")   return <Bars n={5} heights={[32, 56, 72, 56, 32]} delay={0} dur="0.5s" />
+  if (state === "speaking") return <Bars n={5} heights={[44, 72, 56, 72, 44]} delay={0} dur="0.65s" />
+  if (state === "playing") return <Bars n={5} heights={[32, 56, 72, 56, 32]} delay={0} dur="0.5s" />
   if (state === "waiting") return (
     <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.4" strokeLinecap="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 8v4l3 3"/>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4l3 3" />
     </svg>
   )
   if (state === "transcribing" || state === "thinking") return (
     <svg width="72" height="72" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
-      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
-      <path d="M4 12a8 8 0 018-8v8H4z" fill="rgba(255,255,255,0.85)"/>
+      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+      <path d="M4 12a8 8 0 018-8v8H4z" fill="rgba(255,255,255,0.85)" />
     </svg>
   )
   if (state === "error") return (
     <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M18 6L6 18M6 6l12 12"/>
+      <path d="M18 6L6 18M6 6l12 12" />
     </svg>
   )
   // idle — mic
   return (
     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+      <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
     </svg>
   )
 }
@@ -220,20 +220,21 @@ function OrbIcon({ state }: { state: State }) {
 
 export default function DevicePage() {
   const [state, setState] = useState<State>("idle")
-  const [transcript, setTranscript]   = useState("")
-  const [message, setMessage]         = useState("")
-  const [errorMsg, setErrorMsg]       = useState("")
-  const [ttsInput, setTtsInput]       = useState("")
-  const [showTts, setShowTts]         = useState(false)
-  const [showHelp, setShowHelp]       = useState(false)
+  const [transcript, setTranscript] = useState("")
+  const [message, setMessage] = useState("")
+  const [errorMsg, setErrorMsg] = useState("")
+  const [ttsInput, setTtsInput] = useState("")
+  const [showTts, setShowTts] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
-  const speakingRef    = useRef(false)
-  const recorderRef    = useRef<MediaRecorder | null>(null)
-  const chunksRef      = useRef<Blob[]>([])
-  const processedIds   = useRef(new Set<string>())
-  const pendingAudioRef   = useRef<DeviceAction | null>(null)
+  const speakingRef = useRef(false)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const processedIds = useRef(new Set<string>())
+  const pendingAudioRef = useRef<DeviceAction | null>(null)
   const listeningForYesNo = useRef(false)
   const [voiceListening, setVoiceListening] = useState(false)
+  const [textInput, setTextInput] = useState("")
 
   const tok = TOKEN[state]
 
@@ -283,6 +284,24 @@ export default function DevicePage() {
     setState("recording")
   }, [state])
 
+  const submitTextInput = useCallback(async () => {
+    const text = textInput.trim()
+    if (!text || state !== "idle") return
+
+    setErrorMsg("")
+    setTranscript(text)
+    setTextInput("")
+    setState("thinking")
+
+    try {
+      const agentReply = await askAgent(text)
+      await handleSpeak(agentReply)
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong")
+      setState("error")
+    }
+  }, [textInput, state])
+
   const stopRecording = useCallback(() => {
     const r = recorderRef.current
     if (r && r.state !== "inactive") r.stop()
@@ -331,8 +350,8 @@ export default function DevicePage() {
             await ackAction(next.id)
             await handleSpeak(next.text_to_speak)
 
-          } else           if (next.kind === "propose_audio") {
-            // 1. Parler l'invitation
+          } else if (next.kind === "propose_audio") {
+            // 1. Speak the invitation
             pendingAudioRef.current = next
             speakingRef.current = true
             setState("speaking")
@@ -340,8 +359,8 @@ export default function DevicePage() {
             try { await speakText(next.text_to_speak) } catch { /* noop */ }
             speakingRef.current = false
             setMessage("")
-            // 2. Passer en mode "waiting" et lancer l'écoute vocale après un délai
-            // (laisser le micro se libérer après la fin du TTS)
+            // 2. Switch to "waiting" state and start voice listening after a delay
+            // (let the mic free up after TTS finishes)
             setState("waiting")
             setTimeout(() => startYesNoListen(), 700)
           }
@@ -357,10 +376,10 @@ export default function DevicePage() {
       cancelled = true
       clearTimeout(timer)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
 
-  // ── Écoute vocale automatique pour OUI / NON ─────────────────────────────────
+  // ── Automatic voice listening for YES / NO ─────────────────────────────────
 
   function startYesNoListen(attempt = 1) {
     if (listeningForYesNo.current && attempt === 1) return
@@ -376,38 +395,38 @@ export default function DevicePage() {
         } else if (result.intent === "no") {
           void handleMusicNo()
         } else if (attempt <= 2) {
-          // Réponse inconnue (pas yes/ni no) → relancer
+          // Unknown response (not yes/no) → retry
           setTimeout(() => startYesNoListen(attempt + 1), 400)
         } else {
-          // Après 3 essais, garder les boutons visibles sans réessayer
+          // After 3 attempts, keep buttons visible without retrying
           listeningForYesNo.current = false
           setVoiceListening(false)
         }
       })
       .catch((err: Error) => {
-        if (!listeningForYesNo.current) return  // annulé par bouton
-        // "no-speech" = silence → relancer silencieusement (max 5 fois)
+        if (!listeningForYesNo.current) return  // canceled by button
+        // "no-speech" = silence → restart silently (max 5 times)
         if (err.message === "no-speech" && attempt <= 5) {
           setTimeout(() => startYesNoListen(attempt + 1), 300)
         } else {
           listeningForYesNo.current = false
           setVoiceListening(false)
-          // Micro non dispo ou timeout → les boutons restent
+          // Mic unavailable or timeout → buttons stay
         }
       })
   }
 
-  // ── Réponses OUI / NON pour propose_audio ────────────────────────────────────
+  // ── YES / NO Responses for propose_audio ────────────────────────────────────
 
   const handleMusicYes = useCallback(async () => {
     if (!pendingAudioRef.current) return
-    listeningForYesNo.current = false   // annuler l'écoute en cours
+    listeningForYesNo.current = false   // cancel ongoing listening
     setVoiceListening(false)
     const action = pendingAudioRef.current
     pendingAudioRef.current = null
     await ackAction(action.id)
 
-    // Dire "Super !" puis jouer la musique
+    // Say "Great!" then play the music
     setState("speaking")
     speakingRef.current = true
     const title = action.audio_title ?? "your music"
@@ -426,7 +445,7 @@ export default function DevicePage() {
 
   const handleMusicNo = useCallback(async () => {
     if (!pendingAudioRef.current) return
-    listeningForYesNo.current = false   // annuler l'écoute en cours
+    listeningForYesNo.current = false   // cancel ongoing listening
     setVoiceListening(false)
     const action = pendingAudioRef.current
     pendingAudioRef.current = null
@@ -491,7 +510,7 @@ export default function DevicePage() {
               background: tok.orb,
               boxShadow: `0 0 6px ${tok.glow}`,
               animation: state !== "idle" && state !== "error" ? "bar 1s ease-in-out infinite alternate" : undefined,
-            }}/>
+            }} />
             <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 500, textTransform: "capitalize", letterSpacing: "0.04em" }}>
               {state}
             </span>
@@ -536,12 +555,12 @@ export default function DevicePage() {
                   position: "absolute", inset: -2, borderRadius: "50%",
                   border: `3px solid ${tok.glow}`,
                   animation: "rings 1.4s ease-out infinite",
-                }}/>
+                }} />
                 <div style={{
                   position: "absolute", inset: -2, borderRadius: "50%",
                   border: `3px solid ${tok.glow}`,
                   animation: "rings 1.4s ease-out 0.7s infinite",
-                }}/>
+                }} />
               </>
             )}
             <OrbIcon state={state} />
@@ -582,10 +601,62 @@ export default function DevicePage() {
             )}
           </div>
 
-          {/* ── Boutons OUI / NON pour la musique ──────────────────────────── */}
+          {/* Text Input Block for Testing */}
+          <div style={{
+            width: "100%", maxWidth: 480,
+            display: "flex", gap: 10,
+          }}>
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  void submitTextInput()
+                }
+              }}
+              placeholder="Type your message here..."
+              disabled={isBusy}
+              style={{
+                flex: 1,
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 16,
+                padding: "16px 20px",
+                color: "#2e2e2e",
+                fontSize: 16,
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+            <button
+              onClick={() => void submitTextInput()}
+              disabled={isBusy || !textInput.trim()}
+              style={{
+                width: 60, height: "100%",
+                borderRadius: 14,
+                background: "#7c3aed",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 20,
+                flexShrink: 0,
+                opacity: (isBusy || !textInput.trim()) ? 0.5 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+
+          {/* YES / NO buttons for music */}
           {state === "waiting" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 480, marginTop: 8 }}>
-              {/* Indicateur d'écoute vocale */}
+              {/* Voice listening indicator */}
               {voiceListening && (
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
@@ -730,7 +801,7 @@ export default function DevicePage() {
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+              <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" />
             </svg>
             TTS test
           </button>
@@ -751,8 +822,8 @@ export default function DevicePage() {
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 8v4m0 4h.01"/>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4m0 4h.01" />
             </svg>
             I need help
           </button>

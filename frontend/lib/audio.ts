@@ -42,7 +42,7 @@ export function buildTtsUrl(text: string, baseUrl: string): string {
   return `${baseUrl}/api/tts?text=${encodeURIComponent(text)}`
 }
 
-/** Lit à haute voix un texte via le TTS du backend. baseUrl = NEXT_PUBLIC_API_URL */
+/** Reads text aloud via the backend TTS. baseUrl = NEXT_PUBLIC_API_URL */
 export async function speakText(baseUrl: string, text: string): Promise<void> {
   if (!text?.trim()) return
   await playAudio(buildTtsUrl(text.trim(), baseUrl))
