@@ -66,18 +66,26 @@ function toProxiedUrl(url: string): string {
 
 async function playAudioUrl(url: string): Promise<void> {
   const src = toProxiedUrl(url)
-  return new Promise((resolve) => {
-    const audio = new window.Audio(src)
-    audio.onended = () => resolve()
-    audio.onerror = (e) => {
-      console.warn("[device] Audio playback error:", e, "url:", src)
-      resolve()
+  try {
+    const res = await fetch(src, { headers: { Authorization: "Bearer demo-token" } })
+    if (!res.ok) throw new Error(`Failed to fetch audio: ${res.status}`)
+    const audioCtx = new AudioContext()
+    // Resume AudioContext if suspended (required for mobile browsers - iOS Chrome/Safari)
+    if (audioCtx.state === "suspended") {
+      await audioCtx.resume()
     }
-    audio.play().catch((e) => {
-      console.warn("[device] Audio play() blocked:", e)
-      resolve()
+    const buf = await audioCtx.decodeAudioData(await res.arrayBuffer())
+    const srcNode = audioCtx.createBufferSource()
+    srcNode.buffer = buf
+    srcNode.connect(audioCtx.destination)
+    await new Promise<void>((resolve) => {
+      srcNode.onended = () => resolve()
+      srcNode.start(0)
     })
-  })
+    await audioCtx.close()
+  } catch (e) {
+    console.warn("[device] Audio playback error:", e)
+  }
 }
 
 async function fetchNextActions(): Promise<DeviceAction[]> {
