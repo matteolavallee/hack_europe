@@ -19,7 +19,7 @@ const RESIDENT_NAME = "Simone"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type State = "idle" | "recording" | "transcribing" | "speaking" | "error"
+type State = "idle" | "recording" | "transcribing" | "thinking" | "speaking" | "error"
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
@@ -33,6 +33,16 @@ async function transcribeBlob(blob: Blob): Promise<string> {
   const res = await fetch(`${BACKEND_URL}/api/stt/transcribe`, { method: "POST", body: form })
   if (!res.ok) throw new Error(`STT error ${res.status}`)
   return ((await res.json()) as { text: string }).text ?? ""
+}
+
+async function askAgent(message: string): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/api/chat/message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  })
+  if (!res.ok) throw new Error(`Agent error ${res.status}`)
+  return ((await res.json()) as { response: string }).response ?? ""
 }
 
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
@@ -73,8 +83,9 @@ async function speakText(text: string, onStart?: () => void, onEnd?: () => void)
 const TOKEN = {
   idle:         { orb: "#00a0dc", glow: "rgba(0,160,220,0.45)",  ring: "rgba(0,160,220,0.2)",   label: `Hello, ${RESIDENT_NAME}`, sub: "Tap to speak" },
   recording:    { orb: "#16a34a", glow: "rgba(22,163,74,0.45)",  ring: "rgba(22,163,74,0.2)",   label: "Listening…",              sub: "Tap again to stop" },
-  transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)",   ring: "rgba(217,119,6,0.18)",  label: "Processing…",            sub: "One moment…" },
-  speaking:     { orb: "#0077b3", glow: "rgba(0,119,179,0.45)",  ring: "rgba(0,119,179,0.2)",   label: "Speaking…",              sub: "" },
+  transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)",   ring: "rgba(217,119,6,0.18)",  label: "Transcribing…",           sub: "One moment…" },
+  thinking:     { orb: "#7c3aed", glow: "rgba(124,58,237,0.4)",  ring: "rgba(124,58,237,0.18)", label: "Thinking…",               sub: "One moment…" },
+  speaking:     { orb: "#0077b3", glow: "rgba(0,119,179,0.45)",  ring: "rgba(0,119,179,0.2)",   label: "Speaking…",               sub: "" },
   error:        { orb: "#dc2626", glow: "rgba(220,38,38,0.35)",  ring: "rgba(220,38,38,0.15)",  label: "Tap to try again",        sub: "" },
 } satisfies Record<State, { orb: string; glow: string; ring: string; label: string; sub: string }>
 
@@ -115,7 +126,7 @@ function Bars({ n, heights, delay, dur }: { n: number; heights: number[]; delay:
 function OrbIcon({ state }: { state: State }) {
   if (state === "recording") return <Bars n={5} heights={[36, 60, 48, 60, 36]} delay={0} dur="0.6s" />
   if (state === "speaking")  return <Bars n={5} heights={[44, 72, 56, 72, 44]} delay={0} dur="0.65s" />
-  if (state === "transcribing") return (
+  if (state === "transcribing" || state === "thinking") return (
     <svg width="72" height="72" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
       <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
       <path d="M4 12a8 8 0 018-8v8H4z" fill="rgba(255,255,255,0.85)"/>
@@ -176,9 +187,19 @@ export default function DevicePage() {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" })
         const text = await transcribeBlob(blob)
         setTranscript(text)
-        setState("idle")
+
+        if (!text.trim()) {
+          setState("idle")
+          return
+        }
+
+        setState("thinking")
+        const agentReply = await askAgent(text)
+
+        // speakText handles the "speaking" state internally
+        await handleSpeak(agentReply)
       } catch (err) {
-        setErrorMsg(err instanceof Error ? err.message : "Transcription failed")
+        setErrorMsg(err instanceof Error ? err.message : "Something went wrong")
         setState("error")
       }
     }
@@ -200,7 +221,7 @@ export default function DevicePage() {
   // ── TTS ──────────────────────────────────────────────────────────────────────
 
   const handleSpeak = useCallback(async (text: string) => {
-    if (!text.trim() || state === "recording" || state === "transcribing" || state === "speaking") return
+    if (!text.trim() || state === "recording" || state === "transcribing" || state === "thinking" || state === "speaking") return
     setErrorMsg("")
     setState("speaking")
     speakingRef.current = true
@@ -221,6 +242,7 @@ export default function DevicePage() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   const orbTappable = state === "idle" || state === "recording" || state === "error"
+  const isBusy = state === "transcribing" || state === "thinking" || state === "speaking"
 
   return (
     <>
@@ -359,8 +381,8 @@ export default function DevicePage() {
             )}
           </div>
 
-          {/* Transcript card */}
-          {transcript && state === "idle" && (
+          {/* Transcript card — visible while AI processes and speaks so user sees what was heard */}
+          {transcript && (state === "idle" || state === "thinking" || state === "speaking") && (
             <div style={{
               width: "100%", maxWidth: 480,
               background: "#ffffff",
@@ -404,7 +426,7 @@ export default function DevicePage() {
               />
               <button
                 onClick={() => handleSpeak(ttsInput)}
-                disabled={state !== "idle" || !ttsInput.trim()}
+                disabled={isBusy || !ttsInput.trim()}
                 style={{
                   width: 52, height: "100%",
                   minHeight: 56,
@@ -415,7 +437,7 @@ export default function DevicePage() {
                   cursor: "pointer",
                   fontSize: 18,
                   flexShrink: 0,
-                  opacity: (state !== "idle" || !ttsInput.trim()) ? 0.4 : 1,
+                  opacity: (isBusy || !ttsInput.trim()) ? 0.4 : 1,
                 }}
               >
                 ▶

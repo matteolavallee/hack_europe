@@ -10,7 +10,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api import chat, telegram_webhook, reminders, health, caregivers, routines
+from app.api import chat, telegram_webhook, reminders, health, caregivers, routines, whatsapp
 from app.api.voice import router as voice_router
 from app.services.scheduler_service import init_scheduler, scheduler
 
@@ -35,13 +35,13 @@ app.add_middleware(
 
 from fastapi.staticfiles import StaticFiles
 
-# Inclusion des routes
 app.include_router(chat.router, prefix="/api")
 app.include_router(telegram_webhook.router, prefix="/api")
 app.include_router(reminders.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(caregivers.router, prefix="/api")
 app.include_router(routines.router, prefix="/api")
+app.include_router(whatsapp.router, prefix="/api")
 
 # Serve static audio files
 app.mount("/audio", StaticFiles(directory="app/static/audio"), name="audio")
