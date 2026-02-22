@@ -9,18 +9,18 @@ from app.tools import register_tool
 
 # Mock database - en production on utiliserait json_store_service avec family_history.json
 FAMILY_MEMORY_DB = {
-    "animaux": "Quand j'étais petit, j'avais un chien merveilleux qui s'appelait Médor.",
-    "enfants": "Ma fille s'appelle Sarah, elle vient souvent le week-end, et mon fils s'appelle Paul.",
-    "mariage": "Je me suis marié en 1970 avec Marie, on a fait une très belle fête de village.",
-    "métier": "J'ai été instituteur toute ma vie, j'adorais enseigner les mathématiques.",
-    "maison": "J'habite cette maison depuis 20 ans, j'aime beaucoup m'occuper des rosiers dans le jardin."
+    "animals": "When I was young, I had a wonderful dog named Buddy. He followed me everywhere.",
+    "children": "My daughter is called Sarah, she comes to visit most weekends. My son is called Paul, he lives nearby.",
+    "marriage": "I got married in 1970. It was a beautiful village celebration, one of the happiest days of my life.",
+    "job": "I was a primary school teacher my whole career. I loved teaching mathematics to the children.",
+    "home": "I have lived in this house for over 20 years. I especially love tending to the rose bushes in the garden."
 }
 
 @register_tool
 def search_family_history(keyword: str) -> Dict[str, Any]:
     """
-    Recherche un souvenir ou une information sur le passé du patient (ex. mots clés: animaux, enfants, mariage, métier, maison).
-    Utile pour rassurer le patient s'il a un trou de mémoire ou s'il se sent angoissé par son passé.
+    Search for a memory or personal detail about the patient's past (e.g. keywords: animals, children, marriage, job, home).
+    Use this to reassure the patient if they have a memory gap or feel anxious about their past.
     """
     keyword = keyword.lower()
     for key, memory_text in FAMILY_MEMORY_DB.items():
