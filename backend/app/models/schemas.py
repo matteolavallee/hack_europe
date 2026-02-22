@@ -150,6 +150,7 @@ class DeviceAction(BaseModel):
     kind: str # speak_reminder, propose_audio, propose_exercise
     text_to_speak: str
     audio_url: Optional[str] = None
+    audio_title: Optional[str] = None
     calendar_item_id: Optional[str] = None
     audio_content_id: Optional[str] = None
 

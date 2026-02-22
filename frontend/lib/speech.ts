@@ -9,12 +9,22 @@ export type SpeechIntent =
   | "play_message"
   | "unknown"
 
-const YES_WORDS = ["yes", "yeah", "yep", "done", "okay", "ok", "sure", "taken", "did"]
-const NO_WORDS = ["no", "nope", "not", "haven't", "didn't"]
-const LATER_WORDS = ["later", "wait", "minute", "soon", "remind", "after"]
-const HELP_WORDS = ["help", "contact", "call", "notify", "caregiver", "someone"]
-const EXERCISE_WORDS = ["exercise", "activity", "workout", "quiz", "game"]
-const PLAY_WORDS = ["message", "play", "listen", "audio", "music"]
+const YES_WORDS = [
+  // English
+  "yes", "yeah", "yep", "done", "okay", "ok", "sure", "taken", "did",
+  // French
+  "oui", "ouais", "ouaip", "d'accord", "bien sûr", "volontiers", "avec plaisir", "super", "parfait",
+]
+const NO_WORDS = [
+  // English
+  "no", "nope", "not", "haven't", "didn't",
+  // French
+  "non", "nan", "pas maintenant", "merci non", "pas envie",
+]
+const LATER_WORDS = ["later", "wait", "minute", "soon", "remind", "after", "plus tard", "après", "tantôt"]
+const HELP_WORDS = ["help", "contact", "call", "notify", "caregiver", "someone", "aide", "appelle", "aidant"]
+const EXERCISE_WORDS = ["exercise", "activity", "workout", "quiz", "game", "exercice", "jeu", "quiz"]
+const PLAY_WORDS = ["message", "play", "listen", "audio", "music", "musique", "chanson", "livre", "joue"]
 
 function parseIntent(transcript: string): SpeechIntent {
   const lower = transcript.toLowerCase()
@@ -49,28 +59,48 @@ export function listenOnce(timeoutMs = 6000): Promise<SpeechResult> {
     const recognition = new SrCtor()
     recognition.lang = "en-US"
     recognition.interimResults = false
-    recognition.maxAlternatives = 1
+    recognition.maxAlternatives = 3   // plus de candidats = meilleure détection
+    recognition.continuous = false
+
+    let settled = false
+    function settle(fn: () => void) {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      fn()
+    }
 
     const timeout = setTimeout(() => {
-      recognition.stop()
-      reject(new Error("timeout"))
+      recognition.abort()
+      settle(() => reject(new Error("timeout")))
     }, timeoutMs)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
-      clearTimeout(timeout)
-      const transcript = event.results[0][0].transcript
-      resolve({ transcript, intent: parseIntent(transcript) })
+      // Essayer tous les résultats disponibles (meilleur intent en priorité)
+      let best: SpeechResult | null = null
+      for (let r = 0; r < event.results.length; r++) {
+        for (let a = 0; a < event.results[r].length; a++) {
+          const transcript = event.results[r][a].transcript
+          const intent = parseIntent(transcript)
+          if (!best || intent !== "unknown") {
+            best = { transcript, intent }
+            if (intent !== "unknown") break
+          }
+        }
+        if (best?.intent !== "unknown") break
+      }
+      if (best) settle(() => resolve(best!))
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (event: any) => {
-      clearTimeout(timeout)
-      reject(new Error(event.error))
+      settle(() => reject(new Error(event.error ?? "recognition-error")))
     }
 
+    // onend SANS résultat = silence ou browser a stoppé → rejeter pour réessayer
     recognition.onend = () => {
-      clearTimeout(timeout)
+      settle(() => reject(new Error("no-speech")))
     }
 
     recognition.start()

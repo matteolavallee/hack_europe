@@ -50,6 +50,74 @@ def create_chat(system_instruction: str):
 from app.tools.update_context_tool import update_patient_context
 
 
+def generate_reminder_phrase(
+    title: str,
+    reminder_type: str,
+    message_text: str | None,
+    resident_name: str = "Simone",
+    is_audio_invite: bool = False,
+) -> str:
+    """
+    Génère une phrase chaleureuse pour un rappel vocal via le LLM.
+    Si is_audio_invite=True, génère une invitation "voulez-vous écouter…?" (pour les routines audio).
+    Fallback simple si le LLM échoue (quota, réseau).
+    """
+    msg = (message_text or "").strip()
+    if msg and msg.startswith("["):
+        import re
+        msg = re.sub(r"^\[[\w_]+\]\s*", "", msg).strip()
+
+    if not client:
+        if is_audio_invite:
+            is_book = "audiobook" in msg.lower() or "book" in msg.lower()
+            content_type = "an audiobook" if is_book else "some music"
+            return f"Good {_time_of_day()}, {resident_name}! It's {title} time. Would you like to listen to {content_type}?"
+        return msg if msg else f"Hi {resident_name}, {title}."
+
+    if is_audio_invite:
+        is_book = "audiobook" in msg.lower() or "book" in msg.lower()
+        content_type = "an audiobook" if is_book else "some music"
+        prompt = f"""Generate exactly ONE warm, friendly invitation sentence in English for {resident_name}.
+Context: It's {title} time. You want to suggest they listen to {content_type}.
+Example: "Good morning {resident_name}! It's coffee time — would you like some music to brighten your day?"
+Be warm, personal, one sentence only. End with a question. Output ONLY the sentence, no quotes."""
+    else:
+        prompt = f"""Generate exactly ONE short, warm reminder sentence in English for {resident_name}.
+- Reminder type: {reminder_type}
+- Title: {title}
+- Extra details: {msg or 'none'}
+
+Examples for medication: "Don't forget to take your morning pills, Simone."
+Examples for appointment: "You have a doctor's appointment today, Simone."
+Be warm, concise, one sentence only. Output ONLY the sentence, no quotes."""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        if response and response.text:
+            text = response.text.strip().strip('"').strip("'")
+            if text:
+                return text
+    except Exception as e:
+        print(f"[LLM] generate_reminder_phrase failed: {e}")
+
+    if is_audio_invite:
+        is_book = "audiobook" in msg.lower() or "book" in msg.lower()
+        content_type = "an audiobook" if is_book else "some music"
+        return f"Good {_time_of_day()}, {resident_name}! It's {title} time. Would you like to listen to {content_type}?"
+    return msg if msg else f"Hi {resident_name}, don't forget: {title}."
+
+
+def _time_of_day() -> str:
+    from datetime import datetime
+    h = datetime.now().hour
+    if h < 12: return "morning"
+    if h < 18: return "afternoon"
+    return "evening"
+
+
 def create_onboarding_chat():
     """
     Creates a Gemini chat session for the patient onboarding loop.
