@@ -30,7 +30,7 @@ def create_chat(system_instruction: str):
     if not client:
         raise RuntimeError("GEMINI_API_KEY is not configured.")
     return client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=AVAILABLE_TOOLS,
@@ -54,7 +54,7 @@ def create_onboarding_chat():
         system_instruction = "Tu es un médecin spécialiste menant un entretien de premier contact."
 
     return client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=[update_patient_context],
