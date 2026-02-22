@@ -13,15 +13,15 @@ from app.tools import register_tool
 @register_tool
 def get_temporal_context() -> Dict[str, Any]:
     """
-    Retourne la date, l'heure et le jour de la semaine actuels.
-    À utiliser dès que le patient pose une question sur le temps ou semble désorienté temporellement.
+    Returns the current date, time, and day of the week.
+    Use this whenever the patient asks about the time or seems temporally disoriented.
     """
     try:
-        # Essayer de mettre la locale en français si possible
-        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+        # Try to set locale to English
+        locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
     except:
-        pass # Fallback silencieux
-        
+        pass # Silent fallback
+
     now = datetime.now()
     return {
         "status": "success",
