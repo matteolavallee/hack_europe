@@ -128,6 +128,10 @@ async function speakText(text: string, onStart?: () => void, onEnd?: () => void)
   )
   if (!res.ok) throw new Error(`TTS error ${res.status}: ${await res.text()}`)
   const audioCtx = new AudioContext()
+  // Resume AudioContext if suspended (required for mobile browsers - iOS Chrome/Safari)
+  if (audioCtx.state === "suspended") {
+    await audioCtx.resume()
+  }
   const buf = await audioCtx.decodeAudioData(await res.arrayBuffer())
   const src = audioCtx.createBufferSource()
   src.buffer = buf
