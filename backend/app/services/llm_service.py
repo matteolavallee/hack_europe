@@ -15,7 +15,7 @@ from app.tools.contact_caregiver import contact_primary_caregiver
 from app.tools.get_temporal_context import get_temporal_context
 from app.tools.search_family_history import search_family_history
 from app.tools.play_audio import play_audio_content
-from app.tools.send_whatsapp_message import send_whatsapp_message
+from app.tools.web_search import search_web
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
@@ -26,7 +26,7 @@ AVAILABLE_TOOLS = [
     get_temporal_context,
     search_family_history,
     play_audio_content,
-    send_whatsapp_message,
+    search_web
 ]
 
 TOOL_MAP = {func.__name__: func for func in AVAILABLE_TOOLS}
