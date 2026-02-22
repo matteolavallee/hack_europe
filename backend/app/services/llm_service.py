@@ -12,6 +12,7 @@ from app.core.config import GEMINI_API_KEY, BASE_DIR
 from app.tools.schedule_reminder import schedule_reminder
 from app.tools.write_log import write_health_log
 from app.tools.contact_caregiver import contact_primary_caregiver
+from app.tools.send_whatsapp_message import send_whatsapp_message
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
@@ -19,6 +20,7 @@ AVAILABLE_TOOLS = [
     schedule_reminder,
     write_health_log,
     contact_primary_caregiver,
+    send_whatsapp_message,
 ]
 
 TOOL_MAP = {func.__name__: func for func in AVAILABLE_TOOLS}

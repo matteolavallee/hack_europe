@@ -18,7 +18,7 @@ export interface CareReceiver {
 
 // ─── Calendar ─────────────────────────────────────────────────────────────────
 
-export type CalendarItemType = "reminder" | "audio_push"
+export type CalendarItemType = "reminder" | "audio_push" | "whatsapp_prompt"
 export type CalendarItemStatus = "scheduled" | "sent" | "completed" | "cancelled"
 
 export interface CalendarItem {

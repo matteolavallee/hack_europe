@@ -10,7 +10,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api import chat, telegram_webhook, reminders, health, caregivers
+from app.api import chat, reminders, health, caregivers
+from app.api.whatsapp import router as whatsapp_router
 from app.api.voice import router as voice_router
 
 @asynccontextmanager
@@ -33,7 +34,7 @@ from fastapi.staticfiles import StaticFiles
 
 # Inclusion des routes
 app.include_router(chat.router, prefix="/api")
-app.include_router(telegram_webhook.router, prefix="/api")
+app.include_router(whatsapp_router, prefix="/api")
 app.include_router(reminders.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(caregivers.router, prefix="/api")

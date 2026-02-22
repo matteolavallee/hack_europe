@@ -21,11 +21,11 @@ import { Input, Select, Textarea } from "@/components/ui/Input"
 import { cn, formatTime } from "@/lib/utils"
 import { useCalendarItems } from "@/hooks/useCalendarItems"
 import { createCalendarItem, CARE_RECEIVER_ID } from "@/lib/api"
-import type { CalendarItem } from "@/lib/types"
+import type { CalendarItem, CalendarItemType } from "@/lib/types"
 
 // ─── Types & Mock data ───────────────────────────────────────────────────────
 
-export type EventCategory = "medication" | "appointment" | "visit" | "voice_message"
+export type EventCategory = "medication" | "appointment" | "visit" | "voice_message" | "whatsapp_message"
 
 export interface TimelineEvent {
   id: string
@@ -81,6 +81,7 @@ function calendarItemToTimelineEvent(item: CalendarItem): TimelineEvent {
     }
   }
   if (item.type === "audio_push") category = "voice_message"
+  if (item.type === "whatsapp_prompt") category = "whatsapp_message"
   const time = formatTime(item.scheduled_at)
   const isDone = item.status !== "scheduled"
   return {
@@ -133,6 +134,14 @@ const CATEGORY_CONFIG: Record<
     border: "border-2 border-[#6D28D9]/50",
     iconBg: "bg-[#C4B5FD] text-[#4C1D95]",
     text: "text-[#4C1D95]",
+  },
+  whatsapp_message: {
+    label: "Message WhatsApp",
+    icon: MessageCircle,
+    bg: "bg-[#DCFCE7]",
+    border: "border-2 border-[#22C55E]/50",
+    iconBg: "bg-[#86EFAC] text-[#166534]",
+    text: "text-[#166534]",
   },
 }
 
@@ -321,9 +330,10 @@ export default function CalendarPage() {
       const scheduledAt = new Date(`${reminderDate}T${reminderTime}:00`).toISOString()
       const messageText = `[${reminderType}] ${reminderMessage.trim()}`.trim()
       const repeat_rule = buildRepeatRuleString()
+      const itemType: CalendarItemType = reminderType === "whatsapp_message" ? "whatsapp_prompt" : "reminder"
       await createCalendarItem({
         care_receiver_id: CARE_RECEIVER_ID,
-        type: "reminder",
+        type: itemType,
         title,
         message_text: messageText || undefined,
         scheduled_at: scheduledAt,
@@ -695,6 +705,7 @@ export default function CalendarPage() {
               { value: "appointment", label: "Medical appointment" },
               { value: "visit", label: "Visit" },
               { value: "voice_message", label: "Voice message" },
+              { value: "whatsapp_message", label: "Message WhatsApp" },
             ]}
             onChange={(e) => setReminderType(e.target.value as EventCategory)}
           />
