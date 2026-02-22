@@ -29,12 +29,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+
 # Inclusion des routes
 app.include_router(chat.router, prefix="/api")
 app.include_router(telegram_webhook.router, prefix="/api")
 app.include_router(reminders.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(caregivers.router, prefix="/api")
+
+# Serve static audio files
+app.mount("/audio", StaticFiles(directory="app/static/audio"), name="audio")
 # voice_router already carries prefix="/api" internally — do NOT add prefix here
 app.include_router(voice_router)
 

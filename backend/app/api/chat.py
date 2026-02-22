@@ -21,22 +21,39 @@ from app.services import json_store_service
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 from app.services import agent_service
+from app.services.tts_service import generate_tts_audio
+from app.core.config import BASE_DIR
 
 @router.post("/message", response_model=ChatResponse)
-def send_chat_message(payload: ChatMessage):
+async def send_chat_message(payload: ChatMessage):
     """
     Reçoit un message (texte ou audio) du patient.
     Process the message through the Agent service (LLM loop) and return.
     """
-    # Dans une vraie app, on utiliserait un ID de session lié à l'utilisateur courant
     SESSION_ID = "default_patient_session"
     
     # L'agent calcule la réponse (avec outillage dynamique si nécessaire)
     final_response = agent_service.process_user_message(SESSION_ID, payload.message)
     
+    audio_url = None
+    try:
+        # Generer l'audio via ElevenLabs
+        audio_bytes = await generate_tts_audio(final_response)
+        
+        # Sauvegarder localement
+        filename = f"resp_{uuid.uuid4().hex[:8]}.mp3"
+        filepath = BASE_DIR / "app" / "static" / "audio" / filename
+        
+        with open(filepath, "wb") as f:
+            f.write(audio_bytes)
+            
+        audio_url = f"/audio/{filename}"
+    except Exception as e:
+        print(f"Erreur lors de la generation TTS interne : {e}")
+
     return ChatResponse(
         response=final_response,
-        audio_url=None  # A intégrer avec elevenlabs plus tard
+        audio_url=audio_url
     )
 
 @router.get("/history", response_model=List[HistoryItem])
