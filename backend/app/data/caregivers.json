@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "cg-0001",
+    "name": "Malo",
+    "relation": "son",
+    "phone": "+33769236059",
+    "telegram_id": "",
+    "telegram_chat_id": null,
+    "email": "malo@example.com",
+    "is_primary": true,
+    "address": null,
+    "context": "Primary caregiver, son of the patient.",
+    "created_at": "2026-02-22T00:00:00Z"
+  }
+]

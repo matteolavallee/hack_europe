@@ -7,7 +7,9 @@ Responsibilities:
 import uuid
 from typing import Dict, Any
 from app.services import json_store_service
+from app.tools import register_tool
 
+@register_tool
 def play_audio_content(audio_type: str) -> Dict[str, Any]:
     """
     Déclenche la lecture d'un contenu audio sur la box du patient (exemples valides pour audio_type : "musique", "message_famille").

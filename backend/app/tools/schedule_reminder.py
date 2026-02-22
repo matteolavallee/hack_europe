@@ -9,7 +9,9 @@ import uuid
 from typing import Dict, Any
 from datetime import datetime
 from app.services import json_store_service
+from app.tools import register_tool
 
+@register_tool
 def schedule_reminder(title: str, time: str, repeat: str = "daily") -> Dict[str, Any]:
     """
     Ajoute un nouveau rappel dans la base de données json à partir de paramètres textuels.
