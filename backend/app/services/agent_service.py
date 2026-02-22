@@ -59,7 +59,7 @@ def load_system_prompt() -> str:
 
     # Dynamically inject patient context into the prompt
     context = get_patient_context()
-    dynamic_part = f"\n\n--- INSTRUCTIONS CONTEXTUELLES DU PATIENT ---\nVoici les informations du patient :\n{json.dumps(context, indent=2, ensure_ascii=False)}"
+    dynamic_part = f"\n\n--- PATIENT CONTEXT ---\nHere is the patient's information:\n{json.dumps(context, indent=2, ensure_ascii=False)}"
     return base_prompt + dynamic_part
 
 def _get_or_create_chat(session_id: str):
@@ -78,33 +78,33 @@ def process_user_message(session_id: str, message: str) -> str:
         chat = _get_or_create_chat(session_id)
     except RuntimeError as e:
         return f"Erreur de configuration: {str(e)}"
-    # --- INJECTION DU CONTEXTE ENVIRONNEMENTAL (Inisible pour l'utilisateur) ---
+    # --- ENVIRONMENTAL CONTEXT INJECTION (Invisible to the user) ---
     from datetime import datetime
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Récupération des données temps-réel
+
+    # Fetch real-time data
     reminders = get_reminders()
     calendar = get_calendar_items()
     devices = get_device_actions()
-    
-    env_context = f"\n[CONTEXTE ENVIRONNEMENTAL TEMPS RÉEL]\nHeure locale précise : {current_time_str}\n"
-    
+
+    env_context = f"\n[REAL-TIME ENVIRONMENTAL CONTEXT]\nCurrent local time: {current_time_str}\n"
+
     if reminders:
-        env_context += "- Rappels récurrents configurés :\n"
+        env_context += "- Configured recurring reminders:\n"
         for r in reminders:
             env_context += f"  * {r.get('title')} ({r.get('scheduled_time')} - {r.get('repeat_rule')})\n"
-            
+
     if calendar:
-        env_context += "- Événements / Audio prévus dans le calendrier :\n"
+        env_context += "- Upcoming calendar events/audio:\n"
         for c in calendar:
-            env_context += f"  * {c.get('title')} prévu à {c.get('scheduled_at')} (Status: {c.get('status')})\n"
-            
+            env_context += f"  * {c.get('title')} scheduled at {c.get('scheduled_at')} (Status: {c.get('status')})\n"
+
     if devices:
-        env_context += "- Notifications/Actions en attente sur l'appareil du patient :\n"
+        env_context += "- Pending notifications/actions on patient's device:\n"
         for d in devices:
-            env_context += f"  * Action en attente ({d.get('kind')}): {d.get('text_to_speak')}\n"
-            
-    env_context += "[FIN DU CONTEXTE ENVIRONNEMENTAL]\n\n"
+            env_context += f"  * Pending action ({d.get('kind')}): {d.get('text_to_speak')}\n"
+
+    env_context += "[END OF ENVIRONMENTAL CONTEXT]\n\n"
     
     augmented_message = env_context + message
     # ---------------------------------------------------------------------------
