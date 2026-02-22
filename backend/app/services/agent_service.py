@@ -142,6 +142,8 @@ def process_user_message(session_id: str, message: str) -> str:
         response = chat.send_message(function_responses)
 
     final_text = response.text
+    if not final_text:
+        final_text = ""
     # Strip markdown so TTS reads clean natural speech
     final_text = _strip_markdown(final_text)
     # Historisation de la réponse finale de l'assistant dans le JSON métier
