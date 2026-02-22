@@ -15,14 +15,19 @@ from app.core import constants
 # Global lock for all JSON read-modify-write operations
 lock = threading.Lock()
 
-def _read_json(file_path: Path) -> Any:
+def _read_json(file_path: Path, default_is_dict: bool = False) -> Any:
     if not file_path.exists():
-        return []
+        # Auto-create file and directory
+        default_data = {} if default_is_dict else []
+        _write_json(file_path, default_data)
+        return default_data
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        return []
+        default_data = {} if default_is_dict else []
+        _write_json(file_path, default_data)
+        return default_data
 
 def _write_json(file_path: Path, data: Any):
     # Ensure directory exists
@@ -45,8 +50,11 @@ def save_care_receivers(receivers: List[Dict[str, Any]]):
     _write_json(constants.CARE_RECEIVERS_FILE, receivers)
 
 def get_patient_context() -> Dict[str, Any]:
-    data = _read_json(constants.PATIENT_CONTEXT_FILE)
+    data = _read_json(constants.PATIENT_CONTEXT_FILE, default_is_dict=True)
     return data if isinstance(data, dict) else {}
+
+def save_patient_context(context: Dict[str, Any]):
+    _write_json(constants.PATIENT_CONTEXT_FILE, context)
 
 def get_reminders() -> List[Dict[str, Any]]:
     return _read_json(constants.REMINDERS_FILE)

@@ -1,16 +1,1 @@
-[
-    {
-        "id": "rem_1",
-        "title": "Take Morning Medication",
-        "time": "08:00",
-        "repeat": "daily",
-        "is_active": true
-    },
-    {
-        "id": "rem_2",
-        "title": "Drink Water",
-        "time": "14:00",
-        "repeat": "daily",
-        "is_active": true
-    }
-]
+[]
