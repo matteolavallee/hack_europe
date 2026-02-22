@@ -2,7 +2,7 @@
   {
     "id": "cg-0001",
     "name": "Malo",
-    "relation": "son",
+    "relation": "famille",
     "phone": "+33769236059",
     "telegram_id": "",
     "telegram_chat_id": null,
@@ -15,7 +15,7 @@
   {
     "id": "cg-0002",
     "name": "Eliott",
-    "relation": "Brother",
+    "relation": "famille",
     "phone": "+33695117195",
     "telegram_id": "",
     "telegram_chat_id": null,
