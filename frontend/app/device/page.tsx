@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { DebugPanel } from "@/components/DebugPanel"
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -22,12 +21,6 @@ const RESIDENT_NAME = "Simone"
 
 type State = "idle" | "recording" | "transcribing" | "thinking" | "speaking" | "error"
 
-type PipelineStep = {
-  step: string
-  value: unknown
-  timestamp: string
-}
-
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
 function pause(ms: number): Promise<void> {
@@ -42,15 +35,14 @@ async function transcribeBlob(blob: Blob): Promise<string> {
   return ((await res.json()) as { text: string }).text ?? ""
 }
 
-async function askAgent(message: string): Promise<{ response: string; pipeline?: PipelineStep[] }> {
+async function askAgent(message: string): Promise<string> {
   const res = await fetch(`${BACKEND_URL}/api/chat/message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
   })
   if (!res.ok) throw new Error(`Agent error ${res.status}`)
-  const data = await res.json() as { response: string; pipeline?: PipelineStep[] }
-  return { response: data.response ?? "", pipeline: data.pipeline }
+  return ((await res.json()) as { response: string }).response ?? ""
 }
 
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
@@ -163,20 +155,12 @@ export default function DevicePage() {
   const [ttsInput, setTtsInput]       = useState("")
   const [showTts, setShowTts]         = useState(false)
   const [showHelp, setShowHelp]       = useState(false)
-  const [pipeline, setPipeline]       = useState<PipelineStep[]>([])
 
   const speakingRef = useRef(false)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef   = useRef<Blob[]>([])
 
   const tok = TOKEN[state]
-
-  // Clear pipeline when user starts recording
-  useEffect(() => {
-    if (state === "recording") {
-      setPipeline([])
-    }
-  }, [state])
 
   // ── Recording ────────────────────────────────────────────────────────────────
 
@@ -210,10 +194,7 @@ export default function DevicePage() {
         }
 
         setState("thinking")
-        const { response: agentReply, pipeline: pipelineData } = await askAgent(text)
-        if (pipelineData) {
-          setPipeline(pipelineData)
-        }
+        const agentReply = await askAgent(text)
 
         // speakText handles the "speaking" state internally
         await handleSpeak(agentReply)
@@ -570,9 +551,6 @@ export default function DevicePage() {
           </div>
         </div>
       )}
-
-      {/* ── Debug Panel ─────────────────────────────────────────────────────────── */}
-      <DebugPanel steps={pipeline} />
     </>
   )
 }

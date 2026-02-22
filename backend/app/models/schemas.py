@@ -114,7 +114,6 @@ class ChatMessage(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     audio_url: Optional[str] = None
-    pipeline: Optional[list[dict]] = None  # For dev debugging
 
 class HistoryItem(BaseModel):
     role: str

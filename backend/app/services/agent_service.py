@@ -7,10 +7,7 @@ Responsibilities:
 """
 import json
 import re
-from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from google.genai import types
 
@@ -25,14 +22,6 @@ from app.models.schemas import HistoryItem
 
 # Simple in-memory cache for chat SDK objects
 _active_chats = {}
-
-
-@dataclass
-class PipelineStep:
-    """Represents a single step in the STT->AI->Tool->TTS pipeline."""
-    step: str  # "transcript" | "tool_call" | "tool_result" | "final_response"
-    value: Any
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
 def _strip_markdown(text: str) -> str:
@@ -80,20 +69,15 @@ def _get_or_create_chat(session_id: str):
         _active_chats[session_id] = create_chat(system_instruction)
     return _active_chats[session_id]
 
-def process_user_message(session_id: str, message: str) -> tuple[str, list[PipelineStep]]:
+def process_user_message(session_id: str, message: str) -> str:
     """
     Sends a message to the agent, handles any necessary tool calls iteratively,
-    and returns the final textual response along with pipeline steps for debugging.
+    and returns the final textual response.
     """
-    pipeline: list[PipelineStep] = []
-
-    # Step 1: Transcript (input from STT)
-    pipeline.append(PipelineStep(step="transcript", value=message))
-
     try:
         chat = _get_or_create_chat(session_id)
     except RuntimeError as e:
-        return f"Configuration error: {str(e)}", pipeline
+        return f"Erreur de configuration: {str(e)}"
     # --- ENVIRONMENTAL CONTEXT INJECTION (Invisible to the user) ---
     from datetime import datetime
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -133,19 +117,13 @@ def process_user_message(session_id: str, message: str) -> tuple[str, list[Pipel
     except Exception as e:
         return f"Erreur de l'agent LLM: {str(e)}"
 
-    # Iteratively resolve tool calls (capture each individually)
+    # Iteratively resolve tool calls
     while response.function_calls:
         function_responses = []
         for fc in response.function_calls:
             name = fc.name
             args = dict(fc.args)
             print(f"[AGENT TOOL EXECUTION] Tool: {name}, Args: {args}")
-
-            # Track tool call in pipeline
-            pipeline.append(PipelineStep(
-                step="tool_call",
-                value={"tool": name, "args": args}
-            ))
 
             if name in TOOL_MAP:
                 try:
@@ -156,12 +134,6 @@ def process_user_message(session_id: str, message: str) -> tuple[str, list[Pipel
                 result = {"error": f"Tool {name} not found"}
 
             print(f"[AGENT TOOL RESULT] Result: {result}")
-
-            # Track tool result in pipeline
-            pipeline.append(PipelineStep(
-                step="tool_result",
-                value={"tool": name, "result": result}
-            ))
 
             function_responses.append(
                 types.Part.from_function_response(name=name, response=result)
@@ -175,10 +147,7 @@ def process_user_message(session_id: str, message: str) -> tuple[str, list[Pipel
     # Historisation de la réponse finale de l'assistant dans le JSON métier
     append_to_conversation(session_id, "assistant", final_text)
 
-    # Track final response in pipeline
-    pipeline.append(PipelineStep(step="final_response", value=final_text))
-
-    return final_text, pipeline
+    return final_text
 
 def get_session_history(session_id: str) -> list[HistoryItem]:
     """Retrieve history from the active chat state."""
