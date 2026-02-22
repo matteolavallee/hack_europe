@@ -15,12 +15,9 @@ from app.services import json_store_service
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-@router.get("/status")
-def health_check():
-    """
-    Une simple route de vérification du système.
-    """
-    return {"status": "ok", "message": "Jarvis backend is running"}
+@router.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "ok", "message": "Healthcare assistant backend is running"}
 
 @router.get("/logs", response_model=List[HealthLog])
 def get_health_logs():

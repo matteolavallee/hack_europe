@@ -17,12 +17,12 @@ export function Sidebar() {
     >
       <div className="px-4 py-5 border-b border-border">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-            <Heart className="h-4 w-4 text-primary" strokeWidth={2} aria-hidden />
+          <div className="flex items-center justify-center">
+            <img src="/logo.svg" alt="Ancrage Logo" className="h-8 w-auto" />
           </div>
           <div>
-            <p className="text-base font-semibold text-foreground">CareLoop</p>
-            <p className="text-xs text-muted-foreground">Lifeline</p>
+            <p className="text-base font-semibold text-foreground">Ancrage</p>
+            <p className="text-xs text-muted-foreground">Cognitive Compass</p>
           </div>
         </Link>
       </div>

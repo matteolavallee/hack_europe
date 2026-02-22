@@ -3,8 +3,8 @@ import "./globals.css"
 import { EnvConfigBanner } from "@/components/EnvConfigBanner"
 
 export const metadata: Metadata = {
-  title: "CareLoop",
-  description: "Voice-first companion for care at home",
+  title: "Ancrage",
+  description: "The Cognitive Compass",
 }
 
 export const viewport: Viewport = {
