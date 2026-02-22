@@ -18,5 +18,15 @@
                 "content": "Il est quelle heure juste là ?"
             }
         ]
+    },
+    {
+        "session_id": "test_env_context",
+        "timestamp": "2026-02-22T03:15:07.736496Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Fais un point sur mon environnement actuel. Est-ce que j'ai des trucs prévus ou en attente ?"
+            }
+        ]
     }
 ]

@@ -12,7 +12,10 @@ from google.genai import types
 
 from app.core.constants import BASE_DIR
 from app.services.llm_service import create_chat, TOOL_MAP
-from app.services.json_store_service import get_patient_context, get_conversations, save_conversations, append_to_conversation
+from app.services.json_store_service import (
+    get_patient_context, get_conversations, save_conversations, append_to_conversation,
+    get_reminders, get_calendar_items, get_device_actions
+)
 
 from app.models.schemas import HistoryItem
 
@@ -54,13 +57,38 @@ def process_user_message(session_id: str, message: str) -> str:
         chat = _get_or_create_chat(session_id)
     except RuntimeError as e:
         return f"Erreur de configuration: {str(e)}"
-
-    # Injection temporelle invisible pour l'agent
+    # --- INJECTION DU CONTEXTE ENVIRONNEMENTAL (Inisible pour l'utilisateur) ---
     from datetime import datetime
-    current_time_str = datetime.now().strftime("%H:%M")
-    augmented_message = f"[Heure locale actuelle de l'utilisateur: {current_time_str}] {message}"
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Historisation du prompt de l'utilisateur dans le JSON métier
+    # Récupération des données temps-réel
+    reminders = get_reminders()
+    calendar = get_calendar_items()
+    devices = get_device_actions()
+    
+    env_context = f"\n[CONTEXTE ENVIRONNEMENTAL TEMPS RÉEL]\nHeure locale précise : {current_time_str}\n"
+    
+    if reminders:
+        env_context += "- Rappels récurrents configurés :\n"
+        for r in reminders:
+            env_context += f"  * {r.get('title')} ({r.get('scheduled_time')} - {r.get('repeat_rule')})\n"
+            
+    if calendar:
+        env_context += "- Événements / Audio prévus dans le calendrier :\n"
+        for c in calendar:
+            env_context += f"  * {c.get('title')} prévu à {c.get('scheduled_at')} (Status: {c.get('status')})\n"
+            
+    if devices:
+        env_context += "- Notifications/Actions en attente sur l'appareil du patient :\n"
+        for d in devices:
+            env_context += f"  * Action en attente ({d.get('kind')}): {d.get('text_to_speak')}\n"
+            
+    env_context += "[FIN DU CONTEXTE ENVIRONNEMENTAL]\n\n"
+    
+    augmented_message = env_context + message
+    # ---------------------------------------------------------------------------
+    
+    # Historisation du prompt de l'utilisateur dans le JSON métier (sans le blabla d'environnement)
     append_to_conversation(session_id, "user", message)
 
     try:
