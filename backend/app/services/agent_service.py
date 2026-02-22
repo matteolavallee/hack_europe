@@ -28,6 +28,11 @@ def load_system_prompt() -> str:
     else:
         base_prompt = "You are a helpful assistant for an Alzheimer patient."
 
+    tools_prompt_path = BASE_DIR / "app" / "prompts" / "tool_instructions.txt"
+    if tools_prompt_path.exists():
+        with open(tools_prompt_path, "r", encoding="utf-8") as f:
+            base_prompt += "\n\n" + f.read()
+
     # Dynamically inject patient context into the prompt
     context = get_patient_context()
     dynamic_part = f"\n\n--- INSTRUCTIONS CONTEXTUELLES DU PATIENT ---\nVoici les informations du patient :\n{json.dumps(context, indent=2, ensure_ascii=False)}"

@@ -50,6 +50,23 @@ uvicorn app.main:app --reload
 The backend will be available at [http://localhost:8000](http://localhost:8000)
 API Documentation (Swagger UI) is available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
+### AI Agent Scripts
+
+**1. Interactive Onboarding Loop**
+To initialize a new patient profile conversationally:
+```bash
+# In the backend directory with .venv active
+python scripts/init_data.py
+```
+This will launch a CLI chat with the AI Dr. to populate `patient_context.json`.
+
+**2. Automated Testing**
+To verify that the AI agent correctly orchestrates its tools (`schedule_reminder`, `write_log`):
+```bash
+# In the backend directory with .venv active
+python -m pytest tests/test_agent_tools.py -v -s
+```
+
 ### 2. Start the Frontend UI
 ```bash
 # Open a new terminal and navigate to the frontend folder

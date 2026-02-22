@@ -1,17 +1,1 @@
-{
-    "patient_id": "p_1",
-    "name": "John Doe",
-    "age": 78,
-    "condition_stage": "moderate",
-    "preferred_name": "Johnny",
-    "known_allergies": [
-        "Penicillin",
-        "Peanuts"
-    ],
-    "home_address": "123 Memory Lane, Cityville",
-    "interests": [
-        "Gardening",
-        "Classical Music",
-        "Dogs"
-    ]
-}
+{}

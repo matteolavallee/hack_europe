@@ -48,6 +48,9 @@ def get_patient_context() -> Dict[str, Any]:
     data = _read_json(constants.PATIENT_CONTEXT_FILE)
     return data if isinstance(data, dict) else {}
 
+def save_patient_context(context: Dict[str, Any]):
+    _write_json(constants.PATIENT_CONTEXT_FILE, context)
+
 def get_reminders() -> List[Dict[str, Any]]:
     return _read_json(constants.REMINDERS_FILE)
 
