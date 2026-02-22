@@ -37,7 +37,7 @@ def update_patient_context(
                 context["emergency_contact"] = {}
                 
             if emergency_contact_phone is not None:
-                from app.core.validators import is_valid_phone
+                from app.utils.validators import is_valid_phone
                 if not is_valid_phone(emergency_contact_phone):
                     return {"error": f"Le numéro '{emergency_contact_phone}' est invalide. Demande au patient de le répéter."}
                 context["emergency_contact"]["phone"] = emergency_contact_phone
