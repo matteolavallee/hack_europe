@@ -1,5 +1,5 @@
 import pytest
-from app.core.validators import is_valid_phone, is_valid_email, is_valid_address
+from app.utils.validators import is_valid_phone, is_valid_email, is_valid_address
 
 def test_is_valid_phone():
     assert is_valid_phone("+33612345678") is True
