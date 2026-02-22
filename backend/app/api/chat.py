@@ -7,6 +7,7 @@ Responsibilities:
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
+import asyncio
 import uuid
 from datetime import datetime
 from pydantic import BaseModel
@@ -32,8 +33,10 @@ async def send_chat_message(payload: ChatMessage):
     """
     SESSION_ID = "default_patient_session"
     
-    # L'agent calcule la réponse (avec outillage dynamique si nécessaire)
-    final_response = agent_service.process_user_message(SESSION_ID, payload.message)
+    # Run the blocking Gemini call in a thread pool so the event loop stays free
+    final_response = await asyncio.to_thread(
+        agent_service.process_user_message, SESSION_ID, payload.message
+    )
     
     audio_url = None
     try:

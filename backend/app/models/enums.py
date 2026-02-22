@@ -16,3 +16,9 @@ class LogSeverity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     CRITICAL = "critical"
+
+
+class CalendarItemType(str, Enum):
+    REMINDER = "reminder"
+    AUDIO_PUSH = "audio_push"
+    WHATSAPP_PROMPT = "whatsapp_prompt"

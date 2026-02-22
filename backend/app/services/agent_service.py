@@ -6,6 +6,7 @@ Responsibilities:
 - Maintain dialogue state and decide when to use specific functions.
 """
 import json
+import re
 from pathlib import Path
 
 from google.genai import types
@@ -44,6 +45,24 @@ def _get_or_create_chat(session_id: str):
         system_instruction = load_system_prompt()
         _active_chats[session_id] = create_chat(system_instruction)
     return _active_chats[session_id]
+
+def _strip_markdown(text: str) -> str:
+    """Remove markdown formatting so TTS reads clean natural speech."""
+    # Bold and italic: **text**, *text*, __text__, _text_
+    text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
+    text = re.sub(r'_{1,3}(.+?)_{1,3}', r'\1', text)
+    # Headers: ## Title → Title
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Bullet points: * item, - item, • item → item (keep the text, drop the symbol)
+    text = re.sub(r'^\s*[\*\-•]\s+', '', text, flags=re.MULTILINE)
+    # Numbered lists: 1. item → item
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # Inline code and code blocks
+    text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
+    # Collapse multiple blank lines into one
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 
 def process_user_message(session_id: str, message: str) -> str:
     """
@@ -84,7 +103,7 @@ def process_user_message(session_id: str, message: str) -> str:
 
         response = chat.send_message(function_responses)
 
-    return response.text
+    return _strip_markdown(response.text)
 
 def get_session_history(session_id: str) -> list[HistoryItem]:
     """Retrieve history from the active chat state."""
