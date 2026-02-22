@@ -6,8 +6,9 @@ Responsibilities:
 - Delegate chat processing to the agent service and return appropriate responses.
 """
 from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
+import asyncio
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -24,6 +25,17 @@ from app.services import agent_service
 from app.services.tts_service import generate_tts_audio
 from app.core.config import BASE_DIR
 
+def _truncate_for_display(value: Any, max_len: int = 500) -> Any:
+    """Truncate large values for UI display."""
+    if isinstance(value, str) and len(value) > max_len:
+        return value[:max_len] + "..."
+    if isinstance(value, dict):
+        return {k: _truncate_for_display(v, max_len) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_truncate_for_display(v, max_len) for v in value]
+    return value
+
+
 @router.post("/message", response_model=ChatResponse)
 async def send_chat_message(payload: ChatMessage):
     """
@@ -31,29 +43,36 @@ async def send_chat_message(payload: ChatMessage):
     Process the message through the Agent service (LLM loop) and return.
     """
     SESSION_ID = "default_patient_session"
-    
+
     # L'agent calcule la réponse (avec outillage dynamique si nécessaire)
-    final_response = agent_service.process_user_message(SESSION_ID, payload.message)
-    
+    final_response, pipeline = await asyncio.to_thread(
+        agent_service.process_user_message, SESSION_ID, payload.message
+    )
+
     audio_url = None
     try:
         # Generer l'audio via ElevenLabs
         audio_bytes = await generate_tts_audio(final_response)
-        
+
         # Sauvegarder localement
         filename = f"resp_{uuid.uuid4().hex[:8]}.mp3"
         filepath = BASE_DIR / "app" / "static" / "audio" / filename
-        
+
         with open(filepath, "wb") as f:
             f.write(audio_bytes)
-            
+
         audio_url = f"/audio/{filename}"
     except Exception as e:
         print(f"Erreur lors de la generation TTS interne : {e}")
 
     return ChatResponse(
         response=final_response,
-        audio_url=audio_url
+        audio_url=audio_url,
+        pipeline=[{
+            "step": p.step,
+            "value": _truncate_for_display(p.value),
+            "timestamp": p.timestamp
+        } for p in pipeline]
     )
 
 @router.get("/history", response_model=List[HistoryItem])
