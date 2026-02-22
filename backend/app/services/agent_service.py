@@ -6,14 +6,13 @@ Responsibilities:
 - Maintain dialogue state and decide when to use specific functions.
 """
 import json
-import re
 from pathlib import Path
 
 from google.genai import types
 
 from app.core.constants import BASE_DIR
 from app.services.llm_service import create_chat, TOOL_MAP
-from app.services.json_store_service import get_patient_context, get_conversations, save_conversations
+from app.services.json_store_service import get_patient_context, get_conversations, save_conversations, append_to_conversation
 
 from app.models.schemas import HistoryItem
 
@@ -46,24 +45,6 @@ def _get_or_create_chat(session_id: str):
         _active_chats[session_id] = create_chat(system_instruction)
     return _active_chats[session_id]
 
-def _strip_markdown(text: str) -> str:
-    """Remove markdown formatting so TTS reads clean natural speech."""
-    # Bold and italic: **text**, *text*, __text__, _text_
-    text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
-    text = re.sub(r'_{1,3}(.+?)_{1,3}', r'\1', text)
-    # Headers: ## Title → Title
-    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
-    # Bullet points: * item, - item, • item → item (keep the text, drop the symbol)
-    text = re.sub(r'^\s*[\*\-•]\s+', '', text, flags=re.MULTILINE)
-    # Numbered lists: 1. item → item
-    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
-    # Inline code and code blocks
-    text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
-    # Collapse multiple blank lines into one
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text.strip()
-
-
 def process_user_message(session_id: str, message: str) -> str:
     """
     Sends a message to the agent, handles any necessary tool calls iteratively,
@@ -74,8 +55,16 @@ def process_user_message(session_id: str, message: str) -> str:
     except RuntimeError as e:
         return f"Erreur de configuration: {str(e)}"
 
+    # Injection temporelle invisible pour l'agent
+    from datetime import datetime
+    current_time_str = datetime.now().strftime("%H:%M")
+    augmented_message = f"[Heure locale actuelle de l'utilisateur: {current_time_str}] {message}"
+    
+    # Historisation du prompt de l'utilisateur dans le JSON métier
+    append_to_conversation(session_id, "user", message)
+
     try:
-        response = chat.send_message(message)
+        response = chat.send_message(augmented_message)
     except Exception as e:
         return f"Erreur de l'agent LLM: {str(e)}"
 
@@ -103,7 +92,11 @@ def process_user_message(session_id: str, message: str) -> str:
 
         response = chat.send_message(function_responses)
 
-    return _strip_markdown(response.text)
+    final_text = response.text
+    # Historisation de la réponse finale de l'assistant dans le JSON métier
+    append_to_conversation(session_id, "assistant", final_text)
+
+    return final_text
 
 def get_session_history(session_id: str) -> list[HistoryItem]:
     """Retrieve history from the active chat state."""

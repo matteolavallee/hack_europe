@@ -1,1 +1,22 @@
-[]
+[
+    {
+        "session_id": "default_patient_session",
+        "timestamp": "2026-02-22T03:10:18.977880Z",
+        "messages": [
+            {
+                "role": "assistant",
+                "content": "Coucou ! C'est l'heure de notre petit jeu quotidien ! Est-ce que tu es prêt ?"
+            }
+        ]
+    },
+    {
+        "session_id": "test_session_time",
+        "timestamp": "2026-02-22T03:11:46.474919Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Il est quelle heure juste là ?"
+            }
+        ]
+    }
+]
