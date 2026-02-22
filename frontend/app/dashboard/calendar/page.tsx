@@ -13,6 +13,8 @@ import {
   MessageCircle,
   Check,
   Clock,
+  Send,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { SeniorCareCalendar } from "@/components/ui/SeniorCareCalendar"
@@ -20,12 +22,13 @@ import { Modal } from "@/components/ui/Modal"
 import { Input, Select, Textarea } from "@/components/ui/Input"
 import { cn, formatTime } from "@/lib/utils"
 import { useCalendarItems } from "@/hooks/useCalendarItems"
-import { createCalendarItem, CARE_RECEIVER_ID } from "@/lib/api"
+import { createCalendarItem, sendVoiceMessageNow, triggerCalendarItemNow, deleteCalendarItem, CARE_RECEIVER_ID } from "@/lib/api"
 import type { CalendarItem, CalendarItemType } from "@/lib/types"
 
 // ─── Types & Mock data ───────────────────────────────────────────────────────
 
 export type EventCategory = "medication" | "appointment" | "visit" | "voice_message" | "whatsapp_message"
+
 
 export interface TimelineEvent {
   id: string
@@ -171,10 +174,16 @@ function TimelineEventCard({
   event,
   isPast,
   selectedDate,
+  onTriggerNow,
+  onDelete,
+  isTriggering,
 }: {
   event: TimelineEvent
   isPast: boolean
   selectedDate: string
+  onTriggerNow?: (eventId: string) => void
+  onDelete?: (eventId: string) => void
+  isTriggering?: boolean
 }) {
   const config = CATEGORY_CONFIG[event.category]
   const Icon = config.icon
@@ -192,7 +201,7 @@ function TimelineEventCard({
       <div className="min-w-0 flex-1">
         <p className={cn("text-sm font-medium", config.text)}>{event.title}</p>
         {event.subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{event.subtitle}</p>}
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">{event.time}</span>
           {isPast ? (
             <span className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
@@ -203,6 +212,43 @@ function TimelineEventCard({
               <Clock className="h-3 w-3" aria-hidden /> Upcoming
             </span>
           )}
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {onTriggerNow && (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={isTriggering}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onTriggerNow(event.id)
+                }}
+                aria-label={`Send ${event.title} now to device`}
+              >
+                {isTriggering ? (
+                  <span className="text-xs">Envoi…</span>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" aria-hidden />
+                    Send now
+                  </>
+                )}
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(event.id)
+                }}
+                aria-label={`Delete ${event.title}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -257,6 +303,8 @@ export default function CalendarPage() {
   const [voiceScheduleTime, setVoiceScheduleTime] = useState(() => getDefaultReminderTime())
   const [voiceSending, setVoiceSending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [triggeringId, setTriggeringId] = useState<string | null>(null)
+  const [sendFeedback, setSendFeedback] = useState<"success" | "error" | null>(null)
 
   // Reminder form state
   const [reminderDate, setReminderDate] = useState(() => getDefaultReminderDate())
@@ -322,6 +370,32 @@ export default function CalendarPage() {
     setCustomRepeatDays(2)
   }
 
+  async function handleTriggerNow(eventId: string) {
+    setTriggeringId(eventId)
+    setSendFeedback(null)
+    try {
+      await triggerCalendarItemNow(eventId, CARE_RECEIVER_ID)
+      await refresh()
+      setSendFeedback("success")
+      setTimeout(() => setSendFeedback(null), 4000)
+    } catch (err) {
+      setSendFeedback("error")
+      setTimeout(() => setSendFeedback(null), 4000)
+      console.error("Send now failed:", err)
+    } finally {
+      setTriggeringId(null)
+    }
+  }
+
+  async function handleDelete(eventId: string) {
+    try {
+      await deleteCalendarItem(eventId)
+      await refresh()
+    } catch {
+      // Error feedback could be added
+    }
+  }
+
   async function handleCreateReminder() {
     const title = reminderTitle.trim()
     if (!title) return
@@ -363,7 +437,7 @@ export default function CalendarPage() {
     setVoiceSending(true)
     try {
       if (voiceSendMode === "now") {
-        // TODO: call API to play message immediately with sender name (e.g. triggerVoiceMessage(careReceiverId, { sender, message }))
+        await sendVoiceMessageNow(CARE_RECEIVER_ID, sender, message)
         closeVoiceModal()
         return
       }
@@ -513,6 +587,22 @@ export default function CalendarPage() {
           </nav>
         </div>
 
+        {/* Feedback Send now */}
+        {sendFeedback === "success" && (
+          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+            <span className="font-medium">Rappel envoyé au device.</span>{" "}
+            <a href="/device" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+              Ouvrez la vue Device ↗
+            </a>{" "}
+            pour l&apos;écouter.
+          </div>
+        )}
+        {sendFeedback === "error" && (
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            Échec de l&apos;envoi. Vérifiez que le backend tourne sur {process.env.NEXT_PUBLIC_API_URL ?? "localhost:8000"}.
+          </div>
+        )}
+
         {/* Timeline */}
         <div className="relative">
           <div className="absolute left-4 top-0 bottom-0 w-px bg-border sm:left-5" aria-hidden />
@@ -531,7 +621,14 @@ export default function CalendarPage() {
               <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
                 <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-muted-foreground sm:left-1" aria-hidden />
                 <div className="flex-1 pt-0">
-                  <TimelineEventCard event={event} isPast selectedDate={selectedDate} />
+                  <TimelineEventCard
+                    event={event}
+                    isPast
+                    selectedDate={selectedDate}
+                    onTriggerNow={handleTriggerNow}
+                    onDelete={handleDelete}
+                    isTriggering={triggeringId === event.id}
+                  />
                 </div>
               </div>
             ))}
@@ -555,7 +652,14 @@ export default function CalendarPage() {
               <div key={event.id} className="relative flex gap-4 pl-2 sm:pl-3">
                 <div className="absolute left-0 top-6 h-4 w-4 shrink-0 rounded-full bg-primary sm:left-1" aria-hidden />
                 <div className="flex-1 pt-0">
-                  <TimelineEventCard event={event} isPast={false} selectedDate={selectedDate} />
+                  <TimelineEventCard
+                    event={event}
+                    isPast={false}
+                    selectedDate={selectedDate}
+                    onTriggerNow={handleTriggerNow}
+                    onDelete={handleDelete}
+                    isTriggering={triggeringId === event.id}
+                  />
                 </div>
               </div>
             ))}
@@ -752,16 +856,16 @@ export default function CalendarPage() {
             {repeatRule === "weekly" && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-gray-600">Every</span>
-                  <select
-                    value={repeatInterval}
-                    onChange={(e) => setRepeatInterval(Number(e.target.value))}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {[1, 2, 3, 4].map((n) => (
-                      <option key={n} value={n}>{n} {n === 1 ? "week" : "weeks"}</option>
-                    ))}
-                  </select>
+                <span className="text-sm text-gray-600">Every</span>
+                <select
+                  value={repeatInterval}
+                  onChange={(e) => setRepeatInterval(Number(e.target.value))}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <option key={n} value={n}>{n} {n === 1 ? "week" : "weeks"}</option>
+                  ))}
+                </select>
                 </div>
                 <Select
                   label="On weekday"
@@ -775,16 +879,16 @@ export default function CalendarPage() {
             {repeatRule === "monthly" && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-gray-600">Every</span>
-                  <select
-                    value={repeatInterval}
-                    onChange={(e) => setRepeatInterval(Number(e.target.value))}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {[1, 2, 3].map((n) => (
-                      <option key={n} value={n}>{n} {n === 1 ? "month" : "months"}</option>
-                    ))}
-                  </select>
+                <span className="text-sm text-gray-600">Every</span>
+                <select
+                  value={repeatInterval}
+                  onChange={(e) => setRepeatInterval(Number(e.target.value))}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  {[1, 2, 3].map((n) => (
+                    <option key={n} value={n}>{n} {n === 1 ? "month" : "months"}</option>
+                  ))}
+                </select>
                 </div>
                 <div className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">On</span>

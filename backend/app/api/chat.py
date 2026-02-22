@@ -191,6 +191,8 @@ def trigger_suggestion(payload: DemoSuggestionPayload):
 @router.get("/device/next-actions", response_model=List[DeviceAction])
 def get_next_actions(care_receiver_id: Optional[str] = Query(None)):
     actions = json_store_service.get_device_actions()
+    # speak_reminder en tête de file pour qu'ils soient traités immédiatement
+    actions = sorted(actions, key=lambda a: 0 if a.get("kind") == "speak_reminder" else 1)
     return [DeviceAction(**a) for a in actions]
 
 @router.post("/device/response")

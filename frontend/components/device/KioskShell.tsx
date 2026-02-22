@@ -106,8 +106,23 @@ export function KioskShell() {
       // Speech not supported, timed-out, or errored — fall through to buttons
       clearTimeout(revealTimer)
       setManualButtons(true)
+      // Auto-dismiss after 25 s if nobody interacts (prevents infinite blocking)
       return new Promise<SpeechIntent>((resolve) => {
-        intentResolveRef.current = resolve
+        let resolved = false
+        const autoTimer = setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            intentResolveRef.current = null
+            resolve("no")
+          }
+        }, 25000)
+        intentResolveRef.current = (intent: SpeechIntent) => {
+          if (!resolved) {
+            resolved = true
+            clearTimeout(autoTimer)
+            resolve(intent)
+          }
+        }
       })
     }
   }
@@ -121,6 +136,7 @@ export function KioskShell() {
       res(intent)
     }
   }
+
 
   // ─── Exercise flow (3 questions) ──────────────────────────────────────────
 
@@ -149,6 +165,15 @@ export function KioskShell() {
     processedIds.current.add(action.id)
 
     try {
+      // ── speak_reminder: parle et s'auto-efface, pas besoin de réponse ──────
+      if (action.kind === "speak_reminder") {
+        await speak(action.text_to_speak)
+        try {
+          await submitDeviceResponse({ action_id: action.id, response: "yes" })
+        } catch { /* noop */ }
+        return
+      }
+
       // SPEAKING
       await speak(action.text_to_speak)
 

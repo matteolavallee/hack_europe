@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/Button"
 
@@ -23,31 +24,51 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
     return () => window.removeEventListener("keydown", handler)
   }, [open, onClose])
 
+  // Lock body scroll and hide scrollbar when modal is open
+  useEffect(() => {
+    if (open) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = "hidden"
+      return () => {
+        document.body.style.overflow = prev
+      }
+    }
+  }, [open])
+
   if (!open) return null
 
   const sizes = {
-    sm: "max-w-sm",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
+    sm: "min-w-[320px] max-w-sm",
+    md: "min-w-[400px] max-w-lg",
+    lg: "min-w-[500px] max-w-2xl",
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const titleId = "modal-title"
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 isolate">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden
       />
 
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "relative flex max-h-[90vh] w-full flex-col bg-card rounded-lg border border-border shadow-lg",
+          "relative z-10 flex max-h-[90vh] w-full shrink-0 flex-col bg-card rounded-lg border border-border shadow-xl",
           sizes[size],
         )}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <h3 id={titleId} className="text-base font-semibold text-foreground">
+            {title}
+          </h3>
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -73,6 +94,10 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
       </div>
     </div>
   )
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : null
 }
 
 interface ConfirmModalProps {

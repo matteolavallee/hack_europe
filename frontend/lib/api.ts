@@ -169,7 +169,12 @@ export async function deleteCalendarItem(id: string): Promise<void> {
 
 export async function getAudioContents(careReceiverId: string): Promise<AudioContent[]> {
   if (USE_MOCK) return mockAudioContents
-  return request<AudioContent[]>(`/api/chat/audio?care_receiver_id=${careReceiverId}`)
+  try {
+    return await request<AudioContent[]>(`/api/chat/audio?care_receiver_id=${careReceiverId}`)
+  } catch (err) {
+    if (isNetworkError(err)) return mockAudioContents
+    throw err
+  }
 }
 
 export async function createAudioContent(data: CreateAudioContentPayload): Promise<AudioContent> {
@@ -235,12 +240,60 @@ export async function getEvents(careReceiverId: string, limit = 50): Promise<Car
 
 // ─── Demo triggers ────────────────────────────────────────────────────────────
 
-export async function triggerReminderNow(careReceiverId: string): Promise<void> {
-  if (USE_MOCK) { console.log("[mock] triggerReminderNow"); return }
-  await request<void>("/api/reminders/demo/trigger-reminder-now", {
-    method: "POST",
-    body: JSON.stringify({ care_receiver_id: careReceiverId }),
-  })
+export async function triggerReminderNow(
+  careReceiverId: string,
+  calendarItemId?: string
+): Promise<{ action_id?: string }> {
+  if (USE_MOCK) {
+    console.log("[mock] triggerReminderNow", calendarItemId)
+    return { action_id: "mock-act-1" }
+  }
+  return request<{ status: string; action_id?: string }>(
+    "/api/reminders/demo/trigger-reminder-now",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        care_receiver_id: careReceiverId,
+        calendar_item_id: calendarItemId,
+      }),
+    }
+  )
+}
+
+export async function triggerCalendarItemNow(
+  itemId: string,
+  careReceiverId: string
+): Promise<{ action_id?: string }> {
+  if (USE_MOCK) {
+    console.log("[mock] triggerCalendarItemNow", itemId)
+    return { action_id: "mock-act-1" }
+  }
+  return request<{ status: string; action_id?: string }>(
+    `/api/reminders/${itemId}/trigger-now?care_receiver_id=${encodeURIComponent(careReceiverId)}`,
+    { method: "POST" }
+  )
+}
+
+export async function sendVoiceMessageNow(
+  careReceiverId: string,
+  senderName: string,
+  message: string
+): Promise<{ action_id?: string }> {
+  if (USE_MOCK) {
+    console.log("[mock] sendVoiceMessageNow", senderName, message)
+    return { action_id: "mock-act-1" }
+  }
+  return request<{ status: string; action_id?: string }>(
+    "/api/reminders/voice-message-now",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        care_receiver_id: careReceiverId,
+        sender_name: senderName,
+        message,
+      }),
+    }
+  )
 }
 
 export async function triggerSuggestion(careReceiverId: string, kind: "exercise" | "message"): Promise<void> {

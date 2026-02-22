@@ -49,6 +49,7 @@ export function Sidebar() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Ouvre l'appareil du bénéficiaire (rappels, musique)"
         >
           <Smartphone className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
           <span className="hidden lg:inline">Device view ↗</span>

@@ -10,6 +10,46 @@
             {
                 "role": "assistant",
                 "content": "Coucou ! C'est l'heure de notre petit jeu quotidien ! Est-ce que tu es prêt ?"
+            },
+            {
+                "role": "user",
+                "content": "Hello Simon, can you hear me, please?"
+            },
+            {
+                "role": "assistant",
+                "content": "Bonjour Simon, oui, je vous entends très bien. Comment allez-vous ce matin ?"
+            },
+            {
+                "role": "user",
+                "content": "Ça va très bien, est-ce que tu peux envoyer un message à Malo dans ta liste de contact et tu lui dis que c'est un beau gosse ?"
+            },
+            {
+                "role": "assistant",
+                "content": null
+            },
+            {
+                "role": "user",
+                "content": "Bonjour Simone, peux-tu jouer la chanson La Kiffance ?"
+            },
+            {
+                "role": "assistant",
+                "content": "Voilà, la musique devrait commencer. J'espère que ça vous plaît !"
+            },
+            {
+                "role": "user",
+                "content": "MBC 뉴스 이덕영입니다."
+            },
+            {
+                "role": "assistant",
+                "content": "Ah, d'accord. Vous écoutez les informations de MBC News. C'est intéressant.\n\nSi vous le souhaitez, j'ai une douce musique que l'on pourrait écouter ensemble. Cela pourrait être agréable. Qu'en pensez-vous ?"
+            },
+            {
+                "role": "user",
+                "content": "Je regarde dans mon calendrier si j'ai des choses de prévues aujourd'hui."
+            },
+            {
+                "role": "assistant",
+                "content": "Bien sûr, je peux regarder pour vous.\n\nAujourd'hui, il est prévu une sieste à 13h00, et un café à 8h00. Il y a aussi vos pilules bleues du matin prévues demain à 6h30."
             }
         ]
     },
@@ -54,6 +94,20 @@
             {
                 "role": "user",
                 "content": "C'est le matin ! Peux-tu utiliser ton outil de recherche web pour chercher la météo générale en France et 2 vraies actualités très positives et récentes dans le monde ? Rédige un petit briefing matinal pour le patient."
+            }
+        ]
+    },
+    {
+        "session_id": "test_session_tools_1",
+        "timestamp": "2026-02-22T04:35:26.077063Z",
+        "messages": [
+            {
+                "role": "user",
+                "content": "J'ai mal à la tête depuis ce matin et je dois prendre mon doliprane à 18h."
+            },
+            {
+                "role": "assistant",
+                "content": "Oh, je suis désolé d'apprendre que vous avez mal à la tête. J'ai bien noté cette information et j'ai programmé un rappel pour votre doliprane à 18h. Je vous le rappellerai sans faute.\n"
             }
         ]
     }

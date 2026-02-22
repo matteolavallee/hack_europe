@@ -128,31 +128,34 @@ async def transcribe_audio(audio: UploadFile = File(...)) -> dict:
     return {"text": resp.json().get("text", "")}
 
 
-# ─── TTS endpoint ─────────────────────────────────────────────────────────────
+# ─── TTS endpoints ────────────────────────────────────────────────────────────
 
-@router.post("/tts/speak")
-async def text_to_speech(req: TtsRequest) -> Response:
-    """Synthesize speech via ElevenLabs and return raw MP3 bytes."""
+@router.get("/tts")
+async def text_to_speech_get(text: str = "") -> Response:
+    """
+    GET /api/tts?text=... — synthèse vocale via ElevenLabs.
+    Utilisé par le KioskShell (balise <audio src="...">) pour lire les rappels.
+    """
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="'text' query param must not be empty.")
+    return await _do_tts(text.strip(), None, None)
+
+
+async def _do_tts(text: str, voice_id: Optional[str], model_id: Optional[str]) -> Response:
+    """Génère l'audio TTS via ElevenLabs."""
     if not _ELEVENLABS_API_KEY:
         raise HTTPException(
             status_code=500,
             detail="ELEVENLABS_API_KEY is not configured on the server.",
         )
-
-    text = req.text.strip()
-    if not text:
-        raise HTTPException(status_code=422, detail="'text' must not be empty.")
     if len(text) > 5000:
         raise HTTPException(
             status_code=422,
             detail=f"'text' exceeds 5 000-character ElevenLabs limit ({len(text)} chars).",
         )
-
-    voice_id = (req.voice_id or _ELEVENLABS_VOICE_ID).strip()
-    model_id = (req.model_id or _ELEVENLABS_MODEL_ID).strip()
-
+    voice_id = (voice_id or _ELEVENLABS_VOICE_ID).strip()
+    model_id = (model_id or _ELEVENLABS_MODEL_ID).strip()
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-
     try:
         async with httpx.AsyncClient(timeout=_ELEVENLABS_TIMEOUT) as client:
             resp = await client.post(
@@ -169,14 +172,116 @@ async def text_to_speech(req: TtsRequest) -> Response:
                 },
             )
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="ElevenLabs API timed out after 30 s.")
+        raise HTTPException(status_code=504, detail="ElevenLabs API timed out.")
     except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"Network error reaching ElevenLabs: {exc}")
+        raise HTTPException(status_code=502, detail=f"Network error: {exc}")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"ElevenLabs returned {resp.status_code}: {resp.text}")
+    return Response(content=resp.content, media_type="audio/mpeg")
+
+
+@router.post("/tts/speak")
+async def text_to_speech(req: TtsRequest) -> Response:
+    """Synthesize speech via ElevenLabs and return raw MP3 bytes."""
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="'text' must not be empty.")
+    return await _do_tts(text, req.voice_id, req.model_id)
+
+
+@router.get("/audio/proxy")
+async def proxy_audio(url: str) -> Response:
+    """
+    Proxy un fichier audio externe (résout les problèmes CORS côté browser).
+    Supporte les liens Google Drive share avec gestion de la page de confirmation.
+    GET /api/audio/proxy?url=https://...
+    """
+    import re as _re
+
+    if not url.strip():
+        raise HTTPException(status_code=422, detail="'url' must not be empty.")
+
+    _HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+
+    # Dropbox : forcer le téléchargement direct (dl=1)
+    if "dropbox.com" in url:
+        url = _re.sub(r"[?&]dl=\d", "", url)
+        url += ("&" if "?" in url else "?") + "dl=1"
+
+    # Convertir les liens Google Drive share en lien de téléchargement direct
+    m = _re.search(r"/d/([a-zA-Z0-9_-]+)", url)
+    if m and "drive.google.com" in url:
+        file_id = m.group(1)
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=60.0,
+            follow_redirects=True,
+            headers=_HEADERS,
+        ) as client:
+            resp = await client.get(url)
+
+            content_type_raw = resp.headers.get("content-type", "")
+
+            # Google Drive renvoie une page HTML de confirmation pour les gros fichiers
+            if "text/html" in content_type_raw:
+                html = resp.content.decode("utf-8", errors="ignore")
+
+                # Chercher le lien "Download anyway" ou le form action
+                confirm_match = _re.search(
+                    r'href="(/uc\?export=download[^"]+confirm=[^"&]+[^"]*)"', html
+                )
+                if not confirm_match:
+                    # Format alternatif dans certaines versions
+                    confirm_match = _re.search(
+                        r'"downloadUrl":"(https://[^"]+)"', html
+                    )
+                    if confirm_match:
+                        confirm_url = confirm_match.group(1).replace(r"\u003d", "=").replace(r"\u0026", "&")
+                    else:
+                        # Essai avec le cookie de confirmation présent dans les cookies
+                        cookie_header = resp.headers.get("set-cookie", "")
+                        token_match = _re.search(r"download_warning_[^=]+=([^;]+)", cookie_header)
+                        if token_match:
+                            token = token_match.group(1)
+                            m2 = _re.search(r"id=([a-zA-Z0-9_-]+)", url)
+                            fid = m2.group(1) if m2 else ""
+                            confirm_url = f"https://drive.google.com/uc?export=download&id={fid}&confirm={token}"
+                        else:
+                            raise HTTPException(
+                                status_code=422,
+                                detail="Google Drive: impossible d'extraire le lien de confirmation. Utilisez une URL directe."
+                            )
+                else:
+                    confirm_url = "https://drive.google.com" + confirm_match.group(1).replace("&amp;", "&")
+
+                resp = await client.get(confirm_url)
+
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Cannot fetch audio: {exc}")
 
     if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Remote returned {resp.status_code}")
+
+    content_type = resp.headers.get("content-type", "audio/mpeg").split(";")[0]
+    # Si toujours du HTML, c'est un échec
+    if "text/html" in content_type:
         raise HTTPException(
-            status_code=502,
-            detail=f"ElevenLabs API returned {resp.status_code}: {resp.text}",
+            status_code=422,
+            detail="Google Drive a retourné du HTML au lieu du fichier audio. Le fichier doit être partagé en accès public."
         )
 
-    return Response(content=resp.content, media_type="audio/mpeg")
+    return Response(
+        content=resp.content,
+        media_type=content_type if content_type.startswith("audio/") else "audio/mpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )

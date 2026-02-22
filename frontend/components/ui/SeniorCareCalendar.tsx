@@ -1,24 +1,51 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { motion } from "framer-motion"
 import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { DayHeader } from "@/components/calendar/DayHeader"
 import { CalendarGrid } from "@/components/calendar/CalendarGrid"
 import { EventSidebar } from "@/components/calendar/EventSidebar"
-import type { CalendarEvent, ViewMode } from "@/lib/calendar-types"
+import { useCalendarItems } from "@/hooks/useCalendarItems"
+import { triggerCalendarItemNow, deleteCalendarItem, CARE_RECEIVER_ID } from "@/lib/api"
+import type { CalendarEvent, ViewMode, EventCategory } from "@/lib/calendar-types"
+import type { CalendarItem } from "@/lib/types"
 
-// Demo data: doctor appointments, family events, shopping
-const DEMO_EVENTS: CalendarEvent[] = [
-  { id: "1", title: "Doctor appointment", date: "2026-02-23", time: "10:00", category: "appointment", member: "doctor", note: "Annual checkup" },
-  { id: "2", title: "Take medication", date: "2026-02-22", time: "08:00", category: "medication", member: "mom" },
-  { id: "3", title: "Family visit", date: "2026-02-22", time: "14:00", category: "visit", member: "family", note: "Sophie coming" },
-  { id: "4", title: "Grocery shopping", date: "2026-02-24", time: "09:30", category: "shopping", member: "dad" },
-  { id: "5", title: "Physiotherapy", date: "2026-02-25", time: "11:00", category: "appointment", member: "doctor" },
-  { id: "6", title: "Voice message from Dad", date: "2026-02-21", time: "18:00", category: "voice_message", member: "dad", isDone: true },
-  { id: "7", title: "Medication reminder", date: "2026-02-21", time: "12:00", category: "medication", member: "mom", isDone: true },
-]
+// ─── Mapping API → CalendarEvent ─────────────────────────────────────────────
+
+function calendarItemToEvent(item: CalendarItem): CalendarEvent {
+  let category: EventCategory = "other"
+
+  if (item.type === "audio_push") {
+    category = "voice_message"
+  } else if (item.type === "whatsapp_prompt") {
+    category = "voice_message"
+  } else if (item.message_text) {
+    const match = item.message_text.match(/^\[(medication|appointment|visit|voice_message|shopping)\]/i)
+    if (match) category = match[1].toLowerCase() as EventCategory
+  }
+
+  const d = new Date(item.scheduled_at)
+  const date = d.toLocaleDateString("en-CA") // YYYY-MM-DD
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+
+  const rawNote = item.message_text?.replace(/^\[[\w_]+\]\s*/, "").trim()
+
+  return {
+    id: item.id,
+    title: item.title,
+    note: rawNote || undefined,
+    date,
+    time,
+    category,
+    member: "family",
+    isDone: item.status !== "scheduled",
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getTodayDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -38,31 +65,49 @@ function getMondayOfWeek(dateStr: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 interface SeniorCareCalendarProps {
   className?: string
-  events?: CalendarEvent[]
-  onAddEvent?: (event: Omit<CalendarEvent, "id">) => void
 }
 
-export function SeniorCareCalendar({
-  className,
-  events: externalEvents,
-  onAddEvent,
-}: SeniorCareCalendarProps) {
-  const [events, setEvents] = useState<CalendarEvent[]>(externalEvents ?? DEMO_EVENTS)
+export function SeniorCareCalendar({ className }: SeniorCareCalendarProps) {
+  const { items, loading, refresh } = useCalendarItems()
   const [selectedDate, setSelectedDate] = useState(getTodayDate())
+  const [triggeringId, setTriggeringId] = useState<string | null>(null)
+
+  const [sendFeedback, setSendFeedback] = useState<"success" | "error" | null>(null)
+
+  async function handleTriggerNow(eventId: string) {
+    setTriggeringId(eventId)
+    setSendFeedback(null)
+    try {
+      await triggerCalendarItemNow(eventId, CARE_RECEIVER_ID)
+      await refresh()
+      setSendFeedback("success")
+      setTimeout(() => setSendFeedback(null), 4000)
+    } catch (err) {
+      setSendFeedback("error")
+      setTimeout(() => setSendFeedback(null), 4000)
+      console.error("Send now failed:", err)
+    } finally {
+      setTriggeringId(null)
+    }
+  }
+
+  async function handleDelete(eventId: string) {
+    try {
+      await deleteCalendarItem(eventId)
+      await refresh()
+    } catch {
+      // Error handled by UI feedback if needed
+    }
+  }
   const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<ViewMode>("month")
+  const [viewMode, setViewMode] = useState<ViewMode>("day")
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
-    const newEvent: CalendarEvent = {
-      ...event,
-      id: `ev-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    }
-    setEvents((prev) => [...prev, newEvent])
-    onAddEvent?.(event)
-  }
+  const events: CalendarEvent[] = useMemo(() => items.map(calendarItemToEvent), [items])
 
   const filteredEvents = useMemo(() => {
     if (!searchQuery.trim()) return events
@@ -70,7 +115,7 @@ export function SeniorCareCalendar({
     return events.filter(
       (e) =>
         e.title.toLowerCase().includes(q) ||
-        (e.note?.toLowerCase().includes(q) ?? false)
+        (e.note?.toLowerCase().includes(q) ?? false),
     )
   }, [events, searchQuery])
 
@@ -133,13 +178,20 @@ export function SeniorCareCalendar({
             month: "long",
           })
 
+  const navLabel =
+    viewMode === "month"
+      ? { prev: "Previous month", next: "Next month" }
+      : viewMode === "week"
+        ? { prev: "Previous week", next: "Next week" }
+        : { prev: "Previous day", next: "Next day" }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn("flex flex-col bg-background", className)}
       role="application"
-      aria-label={`Family Calendar - ${headerLabel}`}
+      aria-label={`Family Calendar — ${headerLabel}`}
     >
       <DayHeader
         selectedDate={selectedDate}
@@ -152,71 +204,79 @@ export function SeniorCareCalendar({
         onViewModeChange={setViewMode}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-auto p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground" id="calendar-title">
-              {headerLabel}
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goPrev}
-                className="flex h-[52px] w-[52px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
-                aria-label={
-                  viewMode === "month"
-                    ? "Previous month"
-                    : viewMode === "week"
-                      ? "Previous week"
-                      : "Previous day"
-                }
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                onClick={goNext}
-                className="flex h-[52px] w-[52px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
-                aria-label={
-                  viewMode === "month"
-                    ? "Next month"
-                    : viewMode === "week"
-                      ? "Next week"
-                      : "Next day"
-                }
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="flex h-[52px] w-[52px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
-                aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-              >
-                {sidebarOpen ? (
-                  <PanelRightClose className="h-6 w-6" aria-hidden />
-                ) : (
-                  <PanelRightOpen className="h-6 w-6" aria-hidden />
-                )}
-              </button>
+      {/* Chargement initial */}
+      {loading && (
+        <div className="flex items-center justify-center py-10">
+          <svg className="h-8 w-8 animate-spin text-primary" fill="none" viewBox="0 0 24 24" aria-hidden>
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <span className="ml-3 text-sm text-muted-foreground">Loading…</span>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Grille principale */}
+          <div className="flex flex-1 flex-col overflow-auto p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold capitalize text-foreground" id="calendar-title">
+                {headerLabel}
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goPrev}
+                  className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
+                  aria-label={navLabel.prev}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={goNext}
+                  className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
+                  aria-label={navLabel.next}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted focus:outline-none focus:ring-[3px] focus:ring-primary/50"
+                  aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                >
+                  {sidebarOpen ? (
+                    <PanelRightClose className="h-5 w-5" aria-hidden />
+                  ) : (
+                    <PanelRightOpen className="h-5 w-5" aria-hidden />
+                  )}
+                </button>
+              </div>
             </div>
+
+            <CalendarGrid
+              viewMode={viewMode}
+              selectedDate={selectedDate}
+              eventsByDate={eventsByDate}
+              onSelectDate={setSelectedDate}
+            />
           </div>
 
-          <CalendarGrid
-            viewMode={viewMode}
-            selectedDate={selectedDate}
-            eventsByDate={eventsByDate}
-            onSelectDate={setSelectedDate}
-          />
+          {/* Panneau latéral */}
+          {sidebarOpen && (
+            <EventSidebar
+              selectedDate={selectedDate}
+              events={selectedDateEvents}
+              onAddEvent={() => {}}
+              onEventAdded={refresh}
+              onTriggerNow={handleTriggerNow}
+              onDelete={handleDelete}
+              onClose={() => setSidebarOpen(false)}
+              isMobile={false}
+              triggeringId={triggeringId}
+              sendFeedback={sendFeedback}
+            />
+          )}
         </div>
-
-        {sidebarOpen && (
-          <EventSidebar
-            selectedDate={selectedDate}
-            events={selectedDateEvents}
-            onAddEvent={handleAddEvent}
-            onClose={() => setSidebarOpen(false)}
-            isMobile={false}
-          />
-        )}
-      </div>
+      )}
     </motion.div>
   )
 }

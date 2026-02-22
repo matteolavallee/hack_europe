@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { listenOnce } from "@/lib/speech"
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -16,10 +17,12 @@ const ELEVENLABS_MODEL_ID = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL_ID ?? "elev
 
 const POST_TTS_DELAY_MS = 350
 const RESIDENT_NAME = "Simone"
+const CARE_RECEIVER_ID = process.env.NEXT_PUBLIC_CARE_RECEIVER_ID ?? "cr-0000-0001"
+const POLL_INTERVAL_MS = 3000
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type State = "idle" | "recording" | "transcribing" | "thinking" | "speaking" | "error"
+type State = "idle" | "recording" | "transcribing" | "thinking" | "speaking" | "waiting" | "playing" | "error"
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
@@ -43,6 +46,61 @@ async function askAgent(message: string): Promise<string> {
   })
   if (!res.ok) throw new Error(`Agent error ${res.status}`)
   return ((await res.json()) as { response: string }).response ?? ""
+}
+
+interface DeviceAction {
+  id: string
+  kind: string
+  text_to_speak: string
+  audio_url?: string | null
+  audio_title?: string | null
+}
+
+/**
+ * Passe toutes les URLs audio par le proxy backend pour éviter les erreurs CORS.
+ * Le proxy gère aussi la conversion des liens Google Drive.
+ */
+function toProxiedUrl(url: string): string {
+  return `${BACKEND_URL}/api/audio/proxy?url=${encodeURIComponent(url)}`
+}
+
+async function playAudioUrl(url: string): Promise<void> {
+  const src = toProxiedUrl(url)
+  return new Promise((resolve) => {
+    const audio = new window.Audio(src)
+    audio.onended = () => resolve()
+    audio.onerror = (e) => {
+      console.warn("[device] Audio playback error:", e, "url:", src)
+      resolve()
+    }
+    audio.play().catch((e) => {
+      console.warn("[device] Audio play() blocked:", e)
+      resolve()
+    })
+  })
+}
+
+async function fetchNextActions(): Promise<DeviceAction[]> {
+  try {
+    const res = await fetch(
+      `${BACKEND_URL}/api/chat/device/next-actions?care_receiver_id=${CARE_RECEIVER_ID}`,
+      { headers: { Authorization: "Bearer demo-token" } }
+    )
+    if (!res.ok) return []
+    return (await res.json()) as DeviceAction[]
+  } catch {
+    return []
+  }
+}
+
+async function ackAction(actionId: string): Promise<void> {
+  try {
+    await fetch(`${BACKEND_URL}/api/chat/device/response`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer demo-token" },
+      body: JSON.stringify({ action_id: actionId, response: "yes" }),
+    })
+  } catch { /* noop */ }
 }
 
 async function speakText(text: string, onStart?: () => void, onEnd?: () => void): Promise<void> {
@@ -86,6 +144,8 @@ const TOKEN = {
   transcribing: { orb: "#d97706", glow: "rgba(217,119,6,0.4)",   ring: "rgba(217,119,6,0.18)",  label: "Transcribing…",           sub: "One moment…" },
   thinking:     { orb: "#7c3aed", glow: "rgba(124,58,237,0.4)",  ring: "rgba(124,58,237,0.18)", label: "Thinking…",               sub: "One moment…" },
   speaking:     { orb: "#0077b3", glow: "rgba(0,119,179,0.45)",  ring: "rgba(0,119,179,0.2)",   label: "Speaking…",               sub: "" },
+  waiting:      { orb: "#f59e0b", glow: "rgba(245,158,11,0.45)", ring: "rgba(245,158,11,0.2)",  label: "Your answer?",            sub: "Yes or No" },
+  playing:      { orb: "#059669", glow: "rgba(5,150,105,0.45)",  ring: "rgba(5,150,105,0.2)",   label: "Playing…",                sub: "Enjoy the music!" },
   error:        { orb: "#dc2626", glow: "rgba(220,38,38,0.35)",  ring: "rgba(220,38,38,0.15)",  label: "Tap to try again",        sub: "" },
 } satisfies Record<State, { orb: string; glow: string; ring: string; label: string; sub: string }>
 
@@ -126,6 +186,13 @@ function Bars({ n, heights, delay, dur }: { n: number; heights: number[]; delay:
 function OrbIcon({ state }: { state: State }) {
   if (state === "recording") return <Bars n={5} heights={[36, 60, 48, 60, 36]} delay={0} dur="0.6s" />
   if (state === "speaking")  return <Bars n={5} heights={[44, 72, 56, 72, 44]} delay={0} dur="0.65s" />
+  if (state === "playing")   return <Bars n={5} heights={[32, 56, 72, 56, 32]} delay={0} dur="0.5s" />
+  if (state === "waiting") return (
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.4" strokeLinecap="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 8v4l3 3"/>
+    </svg>
+  )
   if (state === "transcribing" || state === "thinking") return (
     <svg width="72" height="72" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
       <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
@@ -156,9 +223,13 @@ export default function DevicePage() {
   const [showTts, setShowTts]         = useState(false)
   const [showHelp, setShowHelp]       = useState(false)
 
-  const speakingRef = useRef(false)
-  const recorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef   = useRef<Blob[]>([])
+  const speakingRef    = useRef(false)
+  const recorderRef    = useRef<MediaRecorder | null>(null)
+  const chunksRef      = useRef<Blob[]>([])
+  const processedIds   = useRef(new Set<string>())
+  const pendingAudioRef   = useRef<DeviceAction | null>(null)
+  const listeningForYesNo = useRef(false)
+  const [voiceListening, setVoiceListening] = useState(false)
 
   const tok = TOKEN[state]
 
@@ -239,10 +310,136 @@ export default function DevicePage() {
     }
   }, [state])
 
+  // ── Polling next-actions (speak_reminder + propose_audio) ────────────────────
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function poll() {
+      if (cancelled) return
+      if (!speakingRef.current && state === "idle") {
+        const actions = await fetchNextActions()
+        const next = actions.find((a) => !processedIds.current.has(a.id))
+        if (next && !cancelled) {
+          processedIds.current.add(next.id)
+
+          if (next.kind === "speak_reminder") {
+            await ackAction(next.id)
+            await handleSpeak(next.text_to_speak)
+
+          } else           if (next.kind === "propose_audio") {
+            // 1. Parler l'invitation
+            pendingAudioRef.current = next
+            speakingRef.current = true
+            setState("speaking")
+            setMessage(next.text_to_speak)
+            try { await speakText(next.text_to_speak) } catch { /* noop */ }
+            speakingRef.current = false
+            setMessage("")
+            // 2. Passer en mode "waiting" et lancer l'écoute vocale après un délai
+            // (laisser le micro se libérer après la fin du TTS)
+            setState("waiting")
+            setTimeout(() => startYesNoListen(), 700)
+          }
+        }
+      }
+      if (!cancelled) {
+        setTimeout(poll, POLL_INTERVAL_MS)
+      }
+    }
+
+    const timer = setTimeout(poll, POLL_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+
+  // ── Écoute vocale automatique pour OUI / NON ─────────────────────────────────
+
+  function startYesNoListen(attempt = 1) {
+    if (listeningForYesNo.current && attempt === 1) return
+    if (attempt === 1) listeningForYesNo.current = true
+    setVoiceListening(true)
+
+    listenOnce(8000)
+      .then((result) => {
+        listeningForYesNo.current = false
+        setVoiceListening(false)
+        if (result.intent === "yes") {
+          void handleMusicYes()
+        } else if (result.intent === "no") {
+          void handleMusicNo()
+        } else if (attempt <= 2) {
+          // Réponse inconnue (pas yes/ni no) → relancer
+          setTimeout(() => startYesNoListen(attempt + 1), 400)
+        } else {
+          // Après 3 essais, garder les boutons visibles sans réessayer
+          listeningForYesNo.current = false
+          setVoiceListening(false)
+        }
+      })
+      .catch((err: Error) => {
+        if (!listeningForYesNo.current) return  // annulé par bouton
+        // "no-speech" = silence → relancer silencieusement (max 5 fois)
+        if (err.message === "no-speech" && attempt <= 5) {
+          setTimeout(() => startYesNoListen(attempt + 1), 300)
+        } else {
+          listeningForYesNo.current = false
+          setVoiceListening(false)
+          // Micro non dispo ou timeout → les boutons restent
+        }
+      })
+  }
+
+  // ── Réponses OUI / NON pour propose_audio ────────────────────────────────────
+
+  const handleMusicYes = useCallback(async () => {
+    if (!pendingAudioRef.current) return
+    listeningForYesNo.current = false   // annuler l'écoute en cours
+    setVoiceListening(false)
+    const action = pendingAudioRef.current
+    pendingAudioRef.current = null
+    await ackAction(action.id)
+
+    // Dire "Super !" puis jouer la musique
+    setState("speaking")
+    speakingRef.current = true
+    const title = action.audio_title ?? "your music"
+    setMessage(`Playing ${title}…`)
+    try { await speakText(`Sure! Enjoy ${title}.`) } catch { /* noop */ }
+    speakingRef.current = false
+
+    if (action.audio_url) {
+      setState("playing")
+      setMessage(title)
+      await playAudioUrl(action.audio_url)
+    }
+    setMessage("")
+    setState("idle")
+  }, [])
+
+  const handleMusicNo = useCallback(async () => {
+    if (!pendingAudioRef.current) return
+    listeningForYesNo.current = false   // annuler l'écoute en cours
+    setVoiceListening(false)
+    const action = pendingAudioRef.current
+    pendingAudioRef.current = null
+    await ackAction(action.id)
+    setState("speaking")
+    speakingRef.current = true
+    setMessage("No problem!")
+    try { await speakText("No problem! Have a great day.") } catch { /* noop */ }
+    speakingRef.current = false
+    setMessage("")
+    setState("idle")
+  }, [])
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   const orbTappable = state === "idle" || state === "recording" || state === "error"
-  const isBusy = state === "transcribing" || state === "thinking" || state === "speaking"
+  const isBusy = state === "transcribing" || state === "thinking" || state === "speaking" || state === "waiting" || state === "playing"
 
   return (
     <>
@@ -380,6 +577,65 @@ export default function DevicePage() {
               </p>
             )}
           </div>
+
+          {/* ── Boutons OUI / NON pour la musique ──────────────────────────── */}
+          {state === "waiting" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 480, marginTop: 8 }}>
+              {/* Indicateur d'écoute vocale */}
+              {voiceListening && (
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  padding: "10px 20px", borderRadius: 14,
+                  background: "rgba(0,160,220,0.08)",
+                  border: "1px solid rgba(0,160,220,0.25)",
+                }}>
+                  <span style={{
+                    width: 10, height: 10, borderRadius: "50%",
+                    background: "#00a0dc",
+                    display: "inline-block",
+                    animation: "bar 0.8s ease-in-out infinite alternate",
+                  }} />
+                  <span style={{ color: "#00a0dc", fontSize: 15, fontWeight: 600 }}>
+                    Listening… say &quot;Yes&quot; or &quot;No&quot;
+                  </span>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 16 }}>
+                <button
+                  onClick={() => void handleMusicYes()}
+                  style={{
+                    flex: 1, padding: "22px 0",
+                    borderRadius: 20,
+                    background: "#16a34a",
+                    border: "none",
+                    color: "#fff",
+                    fontSize: 24,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
+                  }}
+                >
+                  ✓ Yes
+                </button>
+                <button
+                  onClick={() => void handleMusicNo()}
+                  style={{
+                    flex: 1, padding: "22px 0",
+                    borderRadius: 20,
+                    background: "#6b7280",
+                    border: "none",
+                    color: "#fff",
+                    fontSize: 24,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(107,114,128,0.25)",
+                  }}
+                >
+                  ✗ No
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Transcript card — visible while AI processes and speaks so user sees what was heard */}
           {transcript && (state === "idle" || state === "thinking" || state === "speaking") && (
